@@ -6,9 +6,12 @@ class HeaderComponent {
      */
     constructor(data) {
         this.data = data;
-        this.item = Lampa.Template.get('qbtComponentHeader', {
+        this.item = $(Lampa.Template.get('qbtComponentHeader', {
             updateButtonLabel: qbtTranslate('Update'),
-        });
+            compactButtonLabel: qbtTranslate('Compact'),
+            freeSpaceLabel: qbtTranslate('FreeSpace'),
+            freeSpace: Lampa.Utils.bytesToSize(data.server_state.free_space_on_disk),
+        }));
     }
 
     render() {

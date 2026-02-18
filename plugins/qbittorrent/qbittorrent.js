@@ -90,10 +90,14 @@ class QBittorrentPlugin {
     static isDLNAEnabled() {
         return Lampa.Storage.field('qbtLampacDLNAIntegration') === true;
     }
+
+    static isNginxEnabled() {
+        return Lampa.Storage.field('qbtNginxIntegration') === true && !!Lampa.Storage.field('qbtNginxURL');
+    }
 }
 
 if (!window.plugin_qbittorrent_ready) {
-    window.qbittorrent_plugin_ready = true;
+    window.plugin_qbittorrent_ready = true;
     startPlugin();
 }
 

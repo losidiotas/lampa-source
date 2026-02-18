@@ -30,6 +30,26 @@
         z-index: -1;
       }
     }
+
+    &--has-title {
+      .qbittorrent-plugin__row_title {
+        display: block;
+      }
+      .qbittorrent-plugin__row_name {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: normal;
+      }
+    }
+    &--hide-name {
+      .qbittorrent-plugin__row_name {
+        display: none;
+      }
+    }
+  }
+
+  &__row_title {
+    display: none;
   }
 
   &__row_footer {
@@ -47,6 +67,12 @@
   &__row_poster {
     flex: 1;
     max-width: 15vh;
+  }
+
+  &__row_title {
+    font-size: 1.3em;
+    word-break: break-word;
+    font-weight: bold;
   }
 
   &__row_name {
@@ -92,6 +118,39 @@
     justify-content: space-between;
     align-items: center;
     margin: 0 2%;
+    &-buttons {
+      display: flex;
+      flex-direction: row;
+      .simple-button {
+        margin-right: 5px;
+      }
+    }
+  }
+
+  &--compact {
+    .qbittorrent-plugin__row_poster {
+      display: none;
+    }
+    .qbittorrent-plugin__row_overview {
+      display: none;
+    }
+    .qbittorrent-plugin__row_name {
+      display: block;
+    }
+    .qbittorrent-plugin__row_title {
+      display: none
+    }
+    .qbittorrent-plugin__row--has-title {
+      .qbittorrent-plugin__row_title {
+        display: block;
+      }
+      .qbittorrent-plugin__row_name {
+        display: none
+      }
+    }
+    .qbittorrent-plugin__row_footer:not(.downloading) {
+      display: none;
+    }
   }
 }
 

@@ -2,7 +2,11 @@ function RegisterTemplates() {
     let styles = `@@include('../plugins/qbittorrent/css/style.css')`;
     Lampa.Template.add('qbtStyles', `<style id="qbtStyles">${styles}</style>`)
     Lampa.Template.add('qbtComponentHeader', `
-        <div class="qbittorrent-plugin-head__update simple-button selector">{updateButtonLabel}</div>
+        <div class="qbittorrent-plugin__head-buttons">
+            <div data-qbt-refresh class="qbittorrent-plugin-head__update simple-button selector">{updateButtonLabel}</div>
+            <div data-qbt-compact class="qbittorrent-plugin-head__compact simple-button selector">{compactButtonLabel}</div>
+        </div>
+        <div class="qbittorrent-plugin-head__free_space">{freeSpaceLabel}: {freeSpace}</div>
     `);
 
     Lampa.Template.add('qbtTorrentRow', `
@@ -11,9 +15,10 @@ function RegisterTemplates() {
                 <img data-qbittorrent-filed="poster" src="{poster}" alt="{name}" class="qbittorrent-plugin__row_poster_img"/>
             </div>
             <div class="qbittorrent-plugin__row_description">
+                <div data-qbittorrent-filed="title" class="qbittorrent-plugin__row_title">{title}</div>
                 <div data-qbittorrent-filed="name" class="qbittorrent-plugin__row_name">{name}</div>
                 <div data-qbittorrent-filed="overview" class="qbittorrent-plugin__row_overview">{overview}</div>
-                <div class="qbittorrent-plugin__row_footer">
+                <div data-qbittorrent-filed="footer"  class="qbittorrent-plugin__row_footer {origState}">
                     <div class="qbittorrent-plugin__row_size">{sizeLabel}: <span data-qbittorrent-filed="totalSize">{totalSize}</span></div>
                     <div class="qbittorrent-plugin__row_state">{stateLabel}: <span data-qbittorrent-filed="state">{state}</span></div>
                     <div data-qbittorrent-filed="dlspeed-container" class="qbittorrent-plugin__row_dlspeed {origState}">{speedLabel}: <span data-qbittorrent-filed="dlspeed">{dlspeed}/{secLabel}</span></div>

@@ -3,10 +3,24 @@ import { qbtTranslate } from "../lang";
 import { lampaEditor } from "../helpers";
 import { TMDBClient } from "../tmdb";
 
+function encodePathPreserveSlashes(p) {
+    return p
+        .split('/')                 // сохраняем структуру папок
+        .map(encodeURIComponent)    // кодируем опасные символы внутри сегмента
+        .join('/');
+}
+
 class TorrentMenu {
     static show(torrent, params) {
         let enabled = Lampa.Controller.enabled().name;
         let menuItems = []
+
+        if (QBittorrentPlugin.isNginxEnabled()) {
+            menuItems.push({
+                title: qbtTranslate('PlayNGINX'),
+                action: 'play-nginx'
+            })
+        }
 
         if (QBittorrentPlugin.isDLNAEnabled()) {
             menuItems.push({
@@ -77,6 +91,10 @@ class TorrentMenu {
                 }
 
                 switch (btn.action) {
+                    case 'play-nginx':
+                        return TorrentMenu.playVideoNginx(torrent).catch(() => {
+                            Lampa.Controller.toggle('content');
+                        })
                     case 'play-dlna':
                         return TorrentMenu.playVideoDLNA(torrent).catch(() => {
                             Lampa.Controller.toggle('content');
@@ -119,12 +137,12 @@ class TorrentMenu {
         return client.SendCommand(command, torrent);
     }
 
-    /**
-     * @param torrent {TorrentDescription}
-     */
-    static  async playVideoDLNA(torrent) {
+    static async playVideoStream(torrent, urlGenerator) {
         let client = await QBittorrentPlugin.client()
         let files = await client.files(torrent.infohash_v1)
+        files = files.sort((a, b) => {
+            return a.name.localeCompare(b.name);
+        })
 
         if (!files || !files.length) {
             Lampa.Noty.show(qbtTranslate('NoFilesInTorrent'));
@@ -137,16 +155,13 @@ class TorrentMenu {
             return
         }
 
-        let protocol = window.location.protocol;
-        let host = window.location.host;
-        let mappingPath = Lampa.Storage.get('qbtLampacDLNAMappingPath', '');
         if (files.length === 1) {
-            let path = `${torrent.save_path}/${files[0].name}`.replace(mappingPath, '')
+            let url = urlGenerator(`${torrent.save_path}/${files[0].name}`)
             let video = {
                 title: torrent.name,
-                url: `${protocol}//${host}/dlna/stream?path=${encodeURIComponent(path)}`,
+                url: url,
                 subtitles: [],
-                timeline: Lampa.Timeline.view(Lampa.Utils.hash(path)),
+                timeline: Lampa.Timeline.view(Lampa.Utils.hash(url)),
             };
 
             Lampa.Player.play(video);
@@ -157,9 +172,18 @@ class TorrentMenu {
         let items = downloadedFiles.map((file, index) => {
             return {
                 title: file.name,
-                checkbox: true,
-                index: index,
-                checked: true
+                onSelect: () => {
+                    let url = urlGenerator(`${torrent.save_path}/${file.name}`)
+                    let video = {
+                        title: file.name,
+                        url: url,
+                        subtitles: [],
+                        timeline: Lampa.Timeline.view(Lampa.Utils.hash(url)),
+                    };
+
+                    Lampa.Player.play(video);
+                    Lampa.Player.playlist([video]);
+                }
             };
         });
 
@@ -168,34 +192,32 @@ class TorrentMenu {
                 title: qbtTranslate('ChooseFileForPlay'),
                 fullsize: true,
                 items: [
-                    {
-                        title: qbtTranslate('Play'),
-                    },
                     ...items,
                 ],
-                onSelect: () => {
-                    let playlist = []
-                    for (let item of items) {
-                        if (item.checked) {
-                            let file = downloadedFiles[item.index];
-                            let path = `${torrent.save_path}/${file.name}`.replace(mappingPath, '')
-                            let video = {
-                                title: file.name,
-                                url: `${protocol}//${host}/dlna/stream?path=${encodeURIComponent(path)}`,
-                                subtitles: [],
-                                timeline: Lampa.Timeline.view(Lampa.Utils.hash(path)),
-                            };
-                            playlist.push(video);
-                        }
-                    }
-
-                    Lampa.Player.play(playlist[0]);
-                    Lampa.Player.playlist(playlist);
-                },
                 onBack: function onBack() {
                     return reject('canceled by user');
                 }
             });
+        })
+    }
+
+    static async playVideoNginx(torrent) {
+        let nginxUrl = Lampa.Storage.get('qbtNginxURL', '');
+
+        return TorrentMenu.playVideoStream(torrent, function (file) {
+            return `${nginxUrl}/${encodeURIComponent(file)}`
+        })
+    }
+
+    static async playVideoDLNA(torrent) {
+        let protocol = window.location.protocol;
+        let host = window.location.host;
+        let mappingPath = Lampa.Storage.get('qbtLampacDLNAMappingPath', '');
+
+        return TorrentMenu.playVideoStream(torrent, function (file) {
+            let path = file.replace(mappingPath, '')
+
+            return `${protocol}//${host}/dlna/stream?path=${encodeURIComponent(path)}`
         })
     }
 

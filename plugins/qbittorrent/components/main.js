@@ -10,7 +10,7 @@ class MainComponent {
     activity = undefined
     active = undefined
     last = undefined
-    html = $("<div class='qbittorrent-plugin'></div>")
+    html = $("<div data-qbittorrent-plugin class='qbittorrent-plugin'></div>")
     head = $("<div class='qbittorrent-plugin__head'></div>");
     body = $('<div class="qbittorrent-plugin__catalog"></div>');
 
@@ -204,7 +204,7 @@ class MainComponent {
         });
 
         // Add click handler for the update button
-        $item[0].on('hover:enter', () => {
+        $item.find('[data-qbt-refresh]').on('hover:enter', () => {
             Lampa.Activity.replace({
                 url: '',
                 title: 'qBittorrent',
@@ -212,6 +212,10 @@ class MainComponent {
                 page: 1
             });
             Lampa.Noty.show(qbtTranslate('Reloaded'));
+        });
+
+        $item.find('[data-qbt-compact]').on('hover:enter', () => {
+            $('[data-qbittorrent-plugin]').toggleClass('qbittorrent-plugin--compact');
         });
 
         this.head.append($item);

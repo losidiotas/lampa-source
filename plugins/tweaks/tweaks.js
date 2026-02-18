@@ -197,7 +197,7 @@ function initializePlugin() {
     try {
         TweaksPlugin.initialize();
     } catch (error) {
-        console.error('[QBT]', 'Error initializing Tweaks plugin:', error);
+        console.error('[TWK]', 'Error initializing Tweaks plugin:', error);
     }
 }
 

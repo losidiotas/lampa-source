@@ -150,6 +150,40 @@ function RegisterSettingsLayout() {
     Lampa.SettingsApi.addParam({
         component: MANIFEST.component,
         param: {
+            name: 'qbtNginxIntegration',
+            type: 'trigger',
+            default: false
+        },
+        field: {
+            name: qbtTranslate('NginxIntegration'),
+        },
+        onChange: onChange
+    });
+    Lampa.SettingsApi.addParam({
+        component: MANIFEST.component,
+        param: {
+            name: 'qbtNginxURL',
+            type: 'input',
+            placeholder: '',
+            values: '',
+            default: ''
+        },
+        field: {
+            name: qbtTranslate('NginxURL')
+        },
+        onRender: function onRender(item) {
+            if (Lampa.Storage.field('qbtNginxIntegration') === true) {
+                item.show();
+            } else {
+                item.hide();
+            }
+        },
+        onChange: onChange
+    });
+
+    Lampa.SettingsApi.addParam({
+        component: MANIFEST.component,
+        param: {
             name: 'qbtRemoveMetadata',
             type: 'button',
         },
@@ -163,6 +197,7 @@ function RegisterSettingsLayout() {
             Lampa.Noty.show(qbtTranslate('MetadataRemoved'))
         }
     })
+
 }
 
 export {

@@ -26,7 +26,9 @@ class TorrentComponent {
             release_date: this.metadata.release_date ? this.metadata.release_date.substring(0, 4) : '',
             poster: TMDBClient.posterURL(this.metadata.poster_path),
             modificators: [
-                metadata ? 'qbittorrent-plugin__row--has-metadata' : ''
+                metadata ? 'qbittorrent-plugin__row--has-metadata' : '',
+                metadata && metadata.title === torrent.name? 'qbittorrent-plugin__row--hide-name' : '',
+                metadata && metadata.title !== undefined && metadata.title !== null && metadata.title.length > 0 ? 'qbittorrent-plugin__row--has-title' : '',
             ].join(' '),
             secLabel: qbtTranslate('Second'),
             seedsLabel: qbtTranslate('SeedsLabel'),
@@ -64,6 +66,7 @@ class TorrentComponent {
             {"field": "poster", "method": "html", "value": metadata.poster_path ? TMDBClient.posterURL(metadata.poster_path) : './img/img_load.svg'},
             {"field": "dlspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.dlspeed)},
             {"field": "dlspeed-container", "method": "class", "class": "downloading", "value": torrent.state === 'downloading'},
+            {"field": "footer", "method": "class", "class": "downloading", "value": torrent.state === 'downloading'},
         ];
 
         for (let patch of patches) {
@@ -79,6 +82,21 @@ class TorrentComponent {
                         element.get(0).classList.remove(patch.class);
                     }
                     break
+            }
+        }
+
+        if (!metadata) {
+            this.render().get(0).classList.remove("qbittorrent-plugin__row--has-metadata")
+        } else {
+            this.render().get(0).classList.add("qbittorrent-plugin__row--has-metadata")
+
+            if (metadata.title !== undefined && metadata.title !== null && metadata.title.length > 0) {
+                this.render().get(0).classList.add("qbittorrent-plugin__row--has-title")
+            } else {
+                this.render().get(0).classList.remove("qbittorrent-plugin__row--has-title")
+            }
+            if (metadata.title === torrent.name) {
+                this.render().get(0).classList.add("qbittorrent-plugin__row--hide-name")
             }
         }
 

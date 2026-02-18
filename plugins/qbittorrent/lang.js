@@ -124,6 +124,14 @@ function InstallLanguagePack() {
             ru: 'Простаивает (разд.)',
             en: 'Stalled (UP)'
         },
+        qbtStoppedUP: {
+            ru: 'Остановлен (загр.)',
+            en: 'Stopped (UP)'
+        },
+        qbtStoppedDL: {
+            ru: 'Остановлен (разд.)',
+            en: 'Stopped (DL)'
+        },
         qbtUnknown: {
             ru: 'Неизвестно',
             en: 'Unknown'
@@ -133,7 +141,7 @@ function InstallLanguagePack() {
             en: 'Uploading'
         },
         qbtLampacDLNAIntegration: {
-            en: 'Enable Lampac DLNA Integration',
+            en: 'Enable Lampac DLNA integration',
             ru: 'Включить интеграцию с Lampac DLNA',
         },
         qbtReloaded: {
@@ -143,6 +151,18 @@ function InstallLanguagePack() {
         qbtPlayDLNA: {
             en: 'Play DLNA',
             ru: 'Воспроизвести DLNA',
+        },
+        qbtPlayNGINX: {
+            en: 'Play via Nginx',
+            ru: 'Воспроизвести с Nginx',
+        },
+        qbtNginxURL: {
+            en: 'Nginx URL',
+            ru: 'Адрес Nginx',
+        },
+        qbtNginxIntegration: {
+            en: 'Enable Nginx integration',
+            ru: 'Включить интеграцию с Nginx',
         },
         qbtUpdateMetadata: {
             en: 'Update metadata',
@@ -237,8 +257,8 @@ function InstallLanguagePack() {
             ru: "Название категории для сериалов",
         },
         qbtChooseFileForPlay: {
-            en: "Select files to play",
-            ru: "Выберите файлы для воспроизведения",
+            en: "Select file to play",
+            ru: "Выберите файл для воспроизведения",
         },
         qbtPlay: {
             en: "Play",
@@ -263,6 +283,10 @@ function InstallLanguagePack() {
         qbtChangeFilesPriority: {
             en: "Selecting files",
             ru: "Выбор файлов"
+        },
+        qbtCompact: {
+            en: "Compact",
+            ru: "Компактно"
         },
     }
 
