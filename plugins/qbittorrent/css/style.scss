@@ -104,6 +104,12 @@
     }
   }
 
+  &__row_upspeed {
+    &:not(.uploading) {
+      display: none;
+    }
+  }
+
   &__modal {
     .settings-input {
       position: relative;
@@ -148,7 +154,7 @@
         display: none
       }
     }
-    .qbittorrent-plugin__row_footer:not(.downloading) {
+    .qbittorrent-plugin__row_footer:not(.downloading):not(.uploading) {
       display: none;
     }
   }

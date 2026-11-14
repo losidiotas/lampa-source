@@ -2,6 +2,10 @@ import { qbtTranslate } from "../lang";
 import { ucfirst } from "../helpers";
 import { TMDBClient } from "../tmdb";
 
+function isUploading(torrent) {
+    return torrent.state === 'uploading' || torrent.state === 'forcedUP';
+}
+
 class TorrentComponent {
     /**
      * @param torrent {TorrentDescription}
@@ -18,8 +22,10 @@ class TorrentComponent {
             hash: torrent.infohash_v1,
             totalSize: Lampa.Utils.bytesToSize(torrent.total_size),
             origState: torrent.state,
+            uploadState: isUploading(torrent) ? 'uploading' : '',
             state: qbtTranslate(ucfirst(torrent.state)),
             dlspeed: Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true),
+            upspeed: Lampa.Utils.bytesToSize(torrent.upspeed * 8, true),
             progress: (torrent.progress * 100).toFixed(2),
             numSeeds: torrent.num_seeds,
             numLeechs: torrent.num_leechs,
@@ -76,13 +82,21 @@ class TorrentComponent {
                 "value": metadata.poster_path ? TMDBClient.posterURL(metadata.poster_path) : './img/img_load.svg'
             },
             {"field": "dlspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true)},
+            {"field": "upspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.upspeed * 8, true)},
             {
                 "field": "dlspeed-container",
                 "method": "class",
                 "class": "downloading",
                 "value": torrent.state === 'downloading'
             },
+            {
+                "field": "upspeed-container",
+                "method": "class",
+                "class": "uploading",
+                "value": isUploading(torrent)
+            },
             {"field": "footer", "method": "class", "class": "downloading", "value": torrent.state === 'downloading'},
+            {"field": "footer", "method": "class", "class": "uploading", "value": isUploading(torrent)},
         ];
 
         for (let patch of patches) {

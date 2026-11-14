@@ -18,10 +18,11 @@ function RegisterTemplates() {
                 <div data-qbittorrent-filed="title" class="qbittorrent-plugin__row_title">{title}</div>
                 <div data-qbittorrent-filed="name" class="qbittorrent-plugin__row_name">{name}</div>
                 <div data-qbittorrent-filed="overview" class="qbittorrent-plugin__row_overview">{overview}</div>
-                <div data-qbittorrent-filed="footer"  class="qbittorrent-plugin__row_footer {origState}">
+                <div data-qbittorrent-filed="footer"  class="qbittorrent-plugin__row_footer {origState} {uploadState}">
                     <div class="qbittorrent-plugin__row_size">{sizeLabel}: <span data-qbittorrent-filed="totalSize">{totalSize}</span></div>
                     <div class="qbittorrent-plugin__row_state">{stateLabel}: <span data-qbittorrent-filed="state">{state}</span></div>
                     <div data-qbittorrent-filed="dlspeed-container" class="qbittorrent-plugin__row_dlspeed {origState}">{speedLabel}: <span data-qbittorrent-filed="dlspeed">{dlspeed}/{secLabel}</span></div>
+                    <div data-qbittorrent-filed="upspeed-container" class="qbittorrent-plugin__row_upspeed {uploadState}">{speedLabel}: <span data-qbittorrent-filed="upspeed">{upspeed}/{secLabel}</span></div>
                     <div class="qbittorrent-plugin__row_progress">{progressLabel}: <span data-qbittorrent-filed="progress">{progress}</span>%</div>
                     <div class="qbittorrent-plugin__row_peers">{seedsLabel}: <span data-qbittorrent-filed="numSeeds">{numSeeds}</span>, {leechsLabel}: <span data-qbittorrent-filed="numLeechs">{numLeechs}</span></div>
                 </div>
