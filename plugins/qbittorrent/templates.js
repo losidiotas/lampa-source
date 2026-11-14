@@ -8,6 +8,7 @@ function RegisterTemplates() {
                     <path d="M20 11A8 8 0 0 0 5.08 7M4 4V9H9M4 13A8 8 0 0 0 18.92 17M20 20V15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
+            <div data-qbt-sort class="qbittorrent-plugin-head__sort simple-button selector">{sortButtonLabel}</div>
             <div data-qbt-compact class="qbittorrent-plugin-head__compact simple-button selector">{compactButtonLabel}</div>
         </div>
         <div class="qbittorrent-plugin-head__free_space">{freeSpaceLabel}: {freeSpace}</div>

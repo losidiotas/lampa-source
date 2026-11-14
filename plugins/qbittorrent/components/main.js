@@ -9,6 +9,9 @@ import { TorrentMenu } from "./torrent_menu";
 const expandedTorrentClass = 'qbittorrent-plugin__row--expanded';
 const compactModeClass = 'qbittorrent-plugin--compact';
 const compactModeStorageKey = 'qbtCompactMode';
+const sortModeStorageKey = 'qbtSortMode';
+const sortModeDate = 'date';
+const sortModeTitle = 'title';
 
 class MainComponent {
     activity = undefined
@@ -128,6 +131,7 @@ class MainComponent {
         // Assemble UI
         this.renderHeader(data);
         this.setCompactMode(Lampa.Storage.get(compactModeStorageKey, false), false);
+        this.setSortMode(Lampa.Storage.get(sortModeStorageKey, sortModeDate), false);
         await this.renderTorrentsList(data);
         this.scroll.append(this.head);
         this.scroll.append(this.body);
@@ -162,6 +166,8 @@ class MainComponent {
                     component.update(torrent, component.metadata)
                 }
             }
+
+            this.sortTorrentComponents();
         }, 3000)
     }
 
@@ -174,6 +180,7 @@ class MainComponent {
         this.body.append(item.render());
         this.items.push(item);
         this.torrentsComponentMap[torrent.infohash_v1] = item;
+        this.sortTorrentComponents();
         this.scroll.update(item.render(), true);
     }
 
@@ -223,6 +230,10 @@ class MainComponent {
             this.setCompactMode(!this.html.hasClass(compactModeClass));
         });
 
+        $item.find('[data-qbt-sort]').on('hover:enter', () => {
+            this.setSortMode(this.sortMode === sortModeTitle ? sortModeDate : sortModeTitle);
+        });
+
         this.head.append($item);
         this.items.push(item);
     }
@@ -240,12 +251,63 @@ class MainComponent {
         }
     }
 
+    setSortMode(mode, save = true) {
+        this.sortMode = mode === sortModeTitle ? sortModeTitle : sortModeDate;
+        this.head.find('[data-qbt-sort]').html(qbtTranslate(
+            this.sortMode === sortModeTitle ? 'SortAlphabetically' : 'SortByDateAdded'
+        ));
+
+        if (save) {
+            Lampa.Storage.set(sortModeStorageKey, this.sortMode);
+        }
+
+        this.sortTorrentComponents();
+    }
+
+    torrentDisplayTitle(component) {
+        const metadata = component.metadata || {};
+        return String(metadata.title || metadata.name || component.torrent.name || '');
+    }
+
+    compareTorrentComponents(first, second) {
+        const titleComparison = this.torrentDisplayTitle(first).localeCompare(
+            this.torrentDisplayTitle(second),
+            Lampa.Storage.get('language', 'ru'),
+            {sensitivity: 'base', numeric: true}
+        );
+
+        if (this.sortMode === sortModeTitle) {
+            return titleComparison || second.torrent.added_on - first.torrent.added_on;
+        }
+
+        return second.torrent.added_on - first.torrent.added_on || titleComparison;
+    }
+
+    sortTorrentComponents() {
+        const header = this.items[0];
+        const currentItems = this.items.slice(1);
+        const sortedItems = currentItems.slice().sort(this.compareTorrentComponents.bind(this));
+        const orderChanged = sortedItems.some((item, index) => item !== currentItems[index]);
+
+        if (!orderChanged) {
+            return;
+        }
+
+        const activeItem = this.items[this.active];
+        sortedItems.forEach((item) => this.body.append(item.render()));
+        this.items = [header].concat(sortedItems);
+
+        if (activeItem) {
+            this.active = this.items.indexOf(activeItem);
+            this.scroll.update(activeItem.render(), true);
+        }
+    }
+
     /**
      * @param data {MainData}
      */
     async renderTorrentsList(data) {
-        const torrents = Object.values(data.torrents)
-            .sort((a, b) => b.added_on - a.added_on);
+        const torrents = Object.values(data.torrents);
 
         for (const torrent of torrents) {
             const item = await this.createTorrentComponent(torrent);
@@ -253,6 +315,8 @@ class MainComponent {
             this.items.push(item);
             this.torrentsComponentMap[torrent.infohash_v1] = item;
         }
+
+        this.sortTorrentComponents();
     }
 
     /**
@@ -261,6 +325,7 @@ class MainComponent {
      */
     rerenderTorrent(torrent, metadata) {
         let existItem = this.html.find(`#qbittorrent-plugin-torrent-${torrent.infohash_v1}`);
+        let component = this.torrentsComponentMap[torrent.infohash_v1];
         let wasExpanded = existItem.hasClass(expandedTorrentClass);
         let newItem = new TorrentComponent(torrent, metadata).render();
         let newHtml = newItem.html()
@@ -268,6 +333,8 @@ class MainComponent {
         existItem.addClass(newItem.attr('class'))
         existItem.toggleClass(expandedTorrentClass, wasExpanded)
         existItem.html(newHtml);
+        component.metadata = metadata;
+        this.sortTorrentComponents();
         Navigator.focus(existItem[0])
         this.scroll.update(this.items[this.active].render(), true);
     }

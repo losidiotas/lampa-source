@@ -288,6 +288,14 @@ function InstallLanguagePack() {
             en: "Compact",
             ru: "Компактно"
         },
+        qbtSortByDateAdded: {
+            en: "By date added",
+            ru: "По дате добавления"
+        },
+        qbtSortAlphabetically: {
+            en: "Alphabetically",
+            ru: "По алфавиту"
+        },
         qbtFullView: {
             en: "Full view",
             ru: "Развернуто"

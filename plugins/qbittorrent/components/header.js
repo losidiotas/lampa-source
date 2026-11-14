@@ -8,6 +8,7 @@ class HeaderComponent {
         this.data = data;
         this.item = $(Lampa.Template.get('qbtComponentHeader', {
             updateButtonLabel: qbtTranslate('Update'),
+            sortButtonLabel: qbtTranslate('SortByDateAdded'),
             compactButtonLabel: qbtTranslate('Compact'),
             freeSpaceLabel: qbtTranslate('FreeSpace'),
             freeSpace: Lampa.Utils.bytesToSize(data.server_state.free_space_on_disk),
