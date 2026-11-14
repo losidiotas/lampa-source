@@ -3,7 +3,11 @@ function RegisterTemplates() {
     Lampa.Template.add('qbtStyles', `<style id="qbtStyles">${styles}</style>`)
     Lampa.Template.add('qbtComponentHeader', `
         <div class="qbittorrent-plugin__head-buttons">
-            <div data-qbt-refresh class="qbittorrent-plugin-head__update simple-button selector">{updateButtonLabel}</div>
+            <div data-qbt-refresh class="qbittorrent-plugin-head__update simple-button selector" title="{updateButtonLabel}" aria-label="{updateButtonLabel}">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 11A8 8 0 0 0 5.08 7M4 4V9H9M4 13A8 8 0 0 0 18.92 17M20 20V15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
             <div data-qbt-compact class="qbittorrent-plugin-head__compact simple-button selector">{compactButtonLabel}</div>
         </div>
         <div class="qbittorrent-plugin-head__free_space">{freeSpaceLabel}: {freeSpace}</div>

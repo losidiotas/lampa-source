@@ -154,8 +154,27 @@
         display: none
       }
     }
-    .qbittorrent-plugin__row_footer:not(.downloading):not(.uploading) {
+    .qbittorrent-plugin__row:not(.qbittorrent-plugin__row--expanded) .qbittorrent-plugin__row_footer:not(.downloading):not(.uploading) {
       display: none;
+    }
+    .qbittorrent-plugin__row--expanded {
+      .qbittorrent-plugin__row_poster,
+      .qbittorrent-plugin__row_overview,
+      .qbittorrent-plugin__row_name {
+        display: block;
+      }
+      .qbittorrent-plugin__row_title {
+        display: none;
+      }
+      &.qbittorrent-plugin__row--has-title {
+        .qbittorrent-plugin__row_title,
+        .qbittorrent-plugin__row_name {
+          display: block;
+        }
+      }
+      &.qbittorrent-plugin__row--hide-name .qbittorrent-plugin__row_name {
+        display: none;
+      }
     }
   }
 }

@@ -6,6 +6,10 @@ import { TorrentComponent } from "./torrent";
 import { QBittorrentPlugin, QBittorrentPlugin as QBittorrent } from "../qbittorrent";
 import { TorrentMenu } from "./torrent_menu";
 
+const expandedTorrentClass = 'qbittorrent-plugin__row--expanded';
+const compactModeClass = 'qbittorrent-plugin--compact';
+const compactModeStorageKey = 'qbtCompactMode';
+
 class MainComponent {
     activity = undefined
     active = undefined
@@ -123,6 +127,7 @@ class MainComponent {
 
         // Assemble UI
         this.renderHeader(data);
+        this.setCompactMode(Lampa.Storage.get(compactModeStorageKey, false), false);
         await this.renderTorrentsList(data);
         this.scroll.append(this.head);
         this.scroll.append(this.body);
@@ -215,11 +220,24 @@ class MainComponent {
         });
 
         $item.find('[data-qbt-compact]').on('hover:enter', () => {
-            $('[data-qbittorrent-plugin]').toggleClass('qbittorrent-plugin--compact');
+            this.setCompactMode(!this.html.hasClass(compactModeClass));
         });
 
         this.head.append($item);
         this.items.push(item);
+    }
+
+    setCompactMode(enabled, save = true) {
+        this.html.toggleClass(compactModeClass, enabled);
+        this.head.find('[data-qbt-compact]').html(qbtTranslate(enabled ? 'FullView' : 'Compact'));
+
+        if (!enabled) {
+            this.body.find(`.${expandedTorrentClass}`).removeClass(expandedTorrentClass);
+        }
+
+        if (save) {
+            Lampa.Storage.set(compactModeStorageKey, enabled);
+        }
     }
 
     /**
@@ -243,10 +261,12 @@ class MainComponent {
      */
     rerenderTorrent(torrent, metadata) {
         let existItem = this.html.find(`#qbittorrent-plugin-torrent-${torrent.infohash_v1}`);
+        let wasExpanded = existItem.hasClass(expandedTorrentClass);
         let newItem = new TorrentComponent(torrent, metadata).render();
         let newHtml = newItem.html()
         existItem.removeClass()
         existItem.addClass(newItem.attr('class'))
+        existItem.toggleClass(expandedTorrentClass, wasExpanded)
         existItem.html(newHtml);
         Navigator.focus(existItem[0])
         this.scroll.update(this.items[this.active].render(), true);
@@ -336,12 +356,7 @@ class MainComponent {
         }
 
         let item = new TorrentComponent(torrent, metadata);
-
-        item.render().on('hover:focus', () => {
-            this.last = item.render()[0];
-            this.active = this.items.indexOf(item);
-            this.scroll.update(this.items[this.active].render(), true);
-        }).on('hover:enter', () => {
+        let showMenu = () => {
             TorrentMenu.show(item.torrent, {
                 full: true,
                 onMetadataUpdated: (metadata) => {
@@ -349,7 +364,20 @@ class MainComponent {
                     this.rerenderTorrent(item.torrent, metadata);
                 }
             })
-        });
+        };
+
+        item.render().on('hover:focus', () => {
+            this.last = item.render()[0];
+            this.active = this.items.indexOf(item);
+            this.scroll.update(this.items[this.active].render(), true);
+        }).on('hover:enter', () => {
+            if (this.html.hasClass(compactModeClass)) {
+                item.render().toggleClass(expandedTorrentClass);
+                this.scroll.update(item.render(), true);
+            } else {
+                showMenu();
+            }
+        }).on('hover:long', showMenu);
 
         return item;
     }

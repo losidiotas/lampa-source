@@ -288,6 +288,10 @@ function InstallLanguagePack() {
             en: "Compact",
             ru: "Компактно"
         },
+        qbtFullView: {
+            en: "Full view",
+            ru: "Развернуто"
+        },
         qbtPlayAll: {
             en: "Play all",
             ru: "Воспроизвести всё"
