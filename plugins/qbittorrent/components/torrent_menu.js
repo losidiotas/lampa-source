@@ -10,6 +10,10 @@ function encodePathPreserveSlashes(p) {
         .join('/');
 }
 
+const tickSvg = `<svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M4.89163 13.2687L9.16582 17.5427L18.7085 8" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`
+
 class TorrentMenu {
     static show(torrent, params) {
         let enabled = Lampa.Controller.enabled().name;
@@ -169,16 +173,26 @@ class TorrentMenu {
             return
         }
 
+        let firstUnwatchedIndex = -1
+
+        let timelines = []
         let items = downloadedFiles.map((file, index) => {
+            let url = urlGenerator(`${torrent.save_path}/${file.name}`)
+            let hash = Lampa.Utils.hash(url)
+            let timeline = Lampa.Timeline.view(hash)
+            if (firstUnwatchedIndex === -1 && timeline.percent < 100) {
+                firstUnwatchedIndex = index
+            }
+            timelines[index] = timeline
+
             return {
-                title: file.name,
+                title: `${timeline.percent === 100 ? '<span class="qbt-watched-icon">✔ </span>': ''}${file.name} (${timeline.percent}%)`,
                 onSelect: () => {
-                    let url = urlGenerator(`${torrent.save_path}/${file.name}`)
                     let video = {
                         title: file.name,
                         url: url,
                         subtitles: [],
-                        timeline: Lampa.Timeline.view(Lampa.Utils.hash(url)),
+                        timeline: timeline,
                     };
 
                     Lampa.Player.play(video);
@@ -186,12 +200,51 @@ class TorrentMenu {
                 }
             };
         });
+        let btnTitle = 'PlayAll'
+        if (firstUnwatchedIndex === -1) {
+            firstUnwatchedIndex = 0
+        }
+
+        if (firstUnwatchedIndex > 0 || timelines[0].percent > 0) {
+            btnTitle = 'ResumePlay'
+        }
 
         return new Promise((resolve, reject) => {
             Lampa.Select.show({
                 title: qbtTranslate('ChooseFileForPlay'),
                 fullsize: true,
                 items: [
+                    {
+                        title: qbtTranslate(btnTitle),
+                        onSelect: () => {
+                            let playlist = downloadedFiles.map((file) => {
+                                let url = urlGenerator(`${torrent.save_path}/${file.name}`)
+                                let hash = Lampa.Utils.hash(url)
+                                let timeline = Lampa.Timeline.view(hash)
+
+                                return {
+                                    title: file.name,
+                                    url: url,
+                                    subtitles: [],
+                                    timeline: timeline,
+                                }
+                            });
+
+
+                            // console.log("firstUnwatchedIndex", firstUnwatchedIndex);
+                            // console.log("playlist", playlist);
+                            let video = {
+                                title: playlist[firstUnwatchedIndex].title,
+                                url: playlist[firstUnwatchedIndex].url,
+                                subtitles: [],
+                                timeline: playlist[firstUnwatchedIndex].timeline,
+                                playlist: playlist,
+                            };
+
+                            Lampa.Player.play(video);
+                            Lampa.Player.playlist(playlist);
+                        }
+                    },
                     ...items,
                 ],
                 onBack: function onBack() {
@@ -205,7 +258,7 @@ class TorrentMenu {
         let nginxUrl = Lampa.Storage.get('qbtNginxURL', '');
 
         return TorrentMenu.playVideoStream(torrent, function (file) {
-            return `${nginxUrl}/${encodeURIComponent(file)}`
+            return `${nginxUrl}/${encodePathPreserveSlashes(file)}`
         })
     }
 
@@ -318,7 +371,7 @@ class TorrentMenu {
             tmdb_id: metadata.id,
             media_type: metadata.media_type,
             overview: metadata.overview,
-            title: metadata.title,
+            title: metadata.title || metadata.name,
             poster_path: metadata.poster_path,
             vote_average: metadata.vote_average,
             vote_count: metadata.vote_count,

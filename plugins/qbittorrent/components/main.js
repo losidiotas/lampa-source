@@ -226,9 +226,11 @@ class MainComponent {
      * @param data {MainData}
      */
     async renderTorrentsList(data) {
-        for (let key in data.torrents) {
-            let torrent = data.torrents[key];
-            let item = await this.createTorrentComponent(torrent)
+        const torrents = Object.values(data.torrents)
+            .sort((a, b) => b.added_on - a.added_on);
+
+        for (const torrent of torrents) {
+            const item = await this.createTorrentComponent(torrent);
             this.body.append(item.render());
             this.items.push(item);
             this.torrentsComponentMap[torrent.infohash_v1] = item;
@@ -242,9 +244,10 @@ class MainComponent {
     rerenderTorrent(torrent, metadata) {
         let existItem = this.html.find(`#qbittorrent-plugin-torrent-${torrent.infohash_v1}`);
         let newItem = new TorrentComponent(torrent, metadata).render();
-        existItem.html(newItem.html());
+        let newHtml = newItem.html()
         existItem.removeClass()
         existItem.addClass(newItem.attr('class'))
+        existItem.html(newHtml);
         Navigator.focus(existItem[0])
         this.scroll.update(this.items[this.active].render(), true);
     }
@@ -342,6 +345,7 @@ class MainComponent {
             TorrentMenu.show(item.torrent, {
                 full: true,
                 onMetadataUpdated: (metadata) => {
+                    item.metadata = metadata
                     this.rerenderTorrent(item.torrent, metadata);
                 }
             })

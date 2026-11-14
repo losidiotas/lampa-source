@@ -1,6 +1,6 @@
-import {qbtTranslate} from "../lang";
-import {ucfirst} from "../helpers";
-import {TMDBClient} from "../tmdb";
+import { qbtTranslate } from "../lang";
+import { ucfirst } from "../helpers";
+import { TMDBClient } from "../tmdb";
 
 class TorrentComponent {
     /**
@@ -10,25 +10,26 @@ class TorrentComponent {
     constructor(torrent, metadata) {
         this.torrent = torrent;
         this.metadata = metadata || {};
+        const metaTitle = metadata.title || metadata.name || '';
 
         this.item = Lampa.Template.get('qbtTorrentRow', {
-            hash: torrent.infohash_v1,
+            title: metaTitle,
             name: torrent.name,
+            hash: torrent.infohash_v1,
             totalSize: Lampa.Utils.bytesToSize(torrent.total_size),
             origState: torrent.state,
             state: qbtTranslate(ucfirst(torrent.state)),
-            dlspeed: Lampa.Utils.bytesToSize(torrent.dlspeed),
+            dlspeed: Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true),
             progress: (torrent.progress * 100).toFixed(2),
             numSeeds: torrent.num_seeds,
             numLeechs: torrent.num_leechs,
-            title: this.metadata.title || '',
             overview: this.metadata.overview || '',
             release_date: this.metadata.release_date ? this.metadata.release_date.substring(0, 4) : '',
             poster: TMDBClient.posterURL(this.metadata.poster_path),
             modificators: [
                 metadata ? 'qbittorrent-plugin__row--has-metadata' : '',
-                metadata && metadata.title === torrent.name? 'qbittorrent-plugin__row--hide-name' : '',
-                metadata && metadata.title !== undefined && metadata.title !== null && metadata.title.length > 0 ? 'qbittorrent-plugin__row--has-title' : '',
+                metadata && metaTitle === torrent.name ? 'qbittorrent-plugin__row--hide-name' : '',
+                metadata && metaTitle.length > 0 ? 'qbittorrent-plugin__row--has-title' : '',
             ].join(' '),
             secLabel: qbtTranslate('Second'),
             seedsLabel: qbtTranslate('SeedsLabel'),
@@ -53,6 +54,8 @@ class TorrentComponent {
      * @param metadata {object}
      */
     update(torrent, metadata) {
+        const metaTitle = metadata.title || metadata.name || '';
+
         let patches = [
             {"field": "name", "method": "html", "value": torrent.name},
             {"field": "totalSize", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.total_size)},
@@ -60,12 +63,25 @@ class TorrentComponent {
             {"field": "progress", "method": "html", "value": (torrent.progress * 100).toFixed(2)},
             {"field": "numSeeds", "method": "html", "value": torrent.num_seeds},
             {"field": "numLeechs", "method": "html", "value": torrent.num_leechs},
-            {"field": "title", "method": "html", "value": metadata.title || ''},
+            {"field": "title", "method": "html", "value": metaTitle},
             {"field": "overview", "method": "html", "value": metadata.overview || ''},
-            {"field": "releaseDate", "method": "html", "value": metadata.release_date ? metadata.release_date.substring(0, 4) : ''},
-            {"field": "poster", "method": "html", "value": metadata.poster_path ? TMDBClient.posterURL(metadata.poster_path) : './img/img_load.svg'},
-            {"field": "dlspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.dlspeed)},
-            {"field": "dlspeed-container", "method": "class", "class": "downloading", "value": torrent.state === 'downloading'},
+            {
+                "field": "releaseDate",
+                "method": "html",
+                "value": metadata.release_date ? metadata.release_date.substring(0, 4) : ''
+            },
+            {
+                "field": "poster",
+                "method": "html",
+                "value": metadata.poster_path ? TMDBClient.posterURL(metadata.poster_path) : './img/img_load.svg'
+            },
+            {"field": "dlspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true)},
+            {
+                "field": "dlspeed-container",
+                "method": "class",
+                "class": "downloading",
+                "value": torrent.state === 'downloading'
+            },
             {"field": "footer", "method": "class", "class": "downloading", "value": torrent.state === 'downloading'},
         ];
 
@@ -90,12 +106,12 @@ class TorrentComponent {
         } else {
             this.render().get(0).classList.add("qbittorrent-plugin__row--has-metadata")
 
-            if (metadata.title !== undefined && metadata.title !== null && metadata.title.length > 0) {
+            if (metaTitle.length > 0) {
                 this.render().get(0).classList.add("qbittorrent-plugin__row--has-title")
             } else {
                 this.render().get(0).classList.remove("qbittorrent-plugin__row--has-title")
             }
-            if (metadata.title === torrent.name) {
+            if (metaTitle === torrent.name) {
                 this.render().get(0).classList.add("qbittorrent-plugin__row--hide-name")
             }
         }

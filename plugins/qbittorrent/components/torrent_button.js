@@ -282,17 +282,13 @@ async function findAlreadyAddedTorrent(torrent) {
     let client = await QBittorrentPlugin.client()
 
     let data = await client.syncMainData()
-    console.log(data)
     if (!data) {
         return Promise.reject('failed to load main data');
     }
 
-    console.log(data.torrents)
-
     if (!data.torrents) {
         return null
     }
-
 
     let magnet = torrent.MagnetUri ? torrent.MagnetUri : torrent.Link
     let topic = magnetExactTopic(magnet);

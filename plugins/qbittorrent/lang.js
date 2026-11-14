@@ -288,6 +288,14 @@ function InstallLanguagePack() {
             en: "Compact",
             ru: "Компактно"
         },
+        qbtPlayAll: {
+            en: "Play all",
+            ru: "Воспроизвести всё"
+        },
+        qbtResumePlay: {
+            en: "Resume playback",
+            ru: "Продолжить просмотр"
+        },
     }
 
     // noinspection JSCheckFunctionSignatures
