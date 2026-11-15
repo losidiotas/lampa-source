@@ -8,6 +8,7 @@ import {
     magnetExactTopic,
     normalizeTorrentMetadata,
     parseTorrentTags,
+    qbtRefreshInterval,
     replaceTorrentMetadataTag,
     torrentHash,
 } from '../plugins/qbittorrent/helpers'
@@ -96,6 +97,13 @@ suite('qBittorrent helpers', () => {
         expect(isTorrentDownloading('downloading')).toBe(true)
         expect(isTorrentDownloading('forcedDL')).toBe(true)
         expect(isTorrentDownloading('stalledDL')).toBe(false)
+    })
+
+    test('uses qBittorrent refresh interval with a 500 ms minimum', () => {
+        expect(qbtRefreshInterval({server_state: {refresh_interval: 1500}})).toBe(1500)
+        expect(qbtRefreshInterval({server_state: {refresh_interval: 100}})).toBe(500)
+        expect(qbtRefreshInterval({server_state: {refresh_interval: 0}}, 2500)).toBe(2500)
+        expect(qbtRefreshInterval({}, 2500)).toBe(2500)
     })
 
     test('safely extracts magnet topics and ignores regular torrent URLs', () => {

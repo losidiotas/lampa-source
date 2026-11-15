@@ -1,7 +1,80 @@
 import { ajax, torrentHash } from "./helpers";
 
+function isObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeCollection(previous = {}, updates = {}, removed = []) {
+    const result = {...(previous || {})};
+
+    for (const [key, value] of Object.entries(updates || {})) {
+        result[key] = isObject(result[key]) && isObject(value)
+            ? {...result[key], ...value}
+            : (isObject(value) ? {...value} : value);
+    }
+
+    for (const key of removed || []) {
+        delete result[key];
+    }
+
+    return result;
+}
+
+function mergeList(previous = [], added = [], removed = []) {
+    const result = new Set(previous || []);
+    for (const value of added || []) {
+        result.add(value);
+    }
+    for (const value of removed || []) {
+        result.delete(value);
+    }
+    return Array.from(result);
+}
+
+function fullMainData(data) {
+    return {
+        ...(data || {}),
+        torrents: mergeCollection({}, data && data.torrents),
+        torrents_removed: [],
+        categories: mergeCollection({}, data && data.categories),
+        categories_removed: [],
+        tags: Array.from((data && data.tags) || []),
+        tags_removed: [],
+        trackers: mergeCollection({}, data && data.trackers),
+        trackers_removed: [],
+        server_state: {...((data && data.server_state) || {})},
+    };
+}
+
+function mergeMainData(previous, update) {
+    if (!previous || (update && update.full_update === true)) {
+        return fullMainData(update);
+    }
+
+    return {
+        ...previous,
+        ...(update || {}),
+        full_update: false,
+        torrents: mergeCollection(previous.torrents, update && update.torrents, update && update.torrents_removed),
+        torrents_removed: [],
+        categories: mergeCollection(previous.categories, update && update.categories, update && update.categories_removed),
+        categories_removed: [],
+        tags: mergeList(previous.tags, update && update.tags, update && update.tags_removed),
+        tags_removed: [],
+        trackers: mergeCollection(previous.trackers, update && update.trackers, update && update.trackers_removed),
+        trackers_removed: [],
+        server_state: {
+            ...(previous.server_state || {}),
+            ...((update && update.server_state) || {}),
+        },
+    };
+}
+
 class QBittorrentClient {
     #appVersion = 0.0
+    #mainDataRid = 0
+    #mainData = null
+    #mainDataSyncPromise = null
 
     constructor(url) {
         this.url = url;
@@ -26,21 +99,44 @@ class QBittorrentClient {
     }
 
     /**
-     * @param rid {Number?}
      * @returns {Promise<MainData>}
      */
-    async syncMainData(rid) {
+    async syncMainData() {
+        if (!this.#mainDataSyncPromise) {
+            this.#mainDataSyncPromise = this.#syncMainData();
+        }
+
+        const currentSync = this.#mainDataSyncPromise;
+        try {
+            return await currentSync;
+        } finally {
+            if (this.#mainDataSyncPromise === currentSync) {
+                this.#mainDataSyncPromise = null;
+            }
+        }
+    }
+
+    async #syncMainData() {
         let params = {
             url: `${this.url}/api/v2/sync/maindata`,
             method: 'GET',
             timeout: 30000,
             headers: this.#headers(),
             data: {
-                rid: rid ?? 0
+                rid: this.#mainDataRid
             },
         }
 
-        return ajax(params);
+        const update = await ajax(params);
+        const mainData = mergeMainData(this.#mainData, update);
+        const responseRid = Number(update && update.rid);
+
+        if (Number.isInteger(responseRid) && responseRid >= 0) {
+            this.#mainDataRid = responseRid;
+        }
+        this.#mainData = mainData;
+
+        return mainData;
     }
 
     /**
@@ -206,5 +302,6 @@ class QBittorrentClient {
 }
 
 export {
-    QBittorrentClient
+    QBittorrentClient,
+    mergeMainData,
 };

@@ -26,7 +26,7 @@ export interface QBittorrentApiEndpoint {
 
     peerLog(lastKnownId?: number): Promise<PeerLog[]>;
 
-    syncMainData(rid?: number): Promise<MainData>;
+    syncMainData(): Promise<MainData>;
 
     syncPeersData(hash: string, rid?: number): Promise<PeerData>;
 

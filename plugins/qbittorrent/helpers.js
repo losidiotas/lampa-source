@@ -40,6 +40,11 @@ function isTorrentDownloading(state) {
     return state === 'downloading' || state === 'forcedDL';
 }
 
+function qbtRefreshInterval(data, fallback = 3000) {
+    const value = data && data.server_state && Number(data.server_state.refresh_interval);
+    return Number.isFinite(value) && value > 0 ? Math.max(500, value) : fallback;
+}
+
 function normalizeTorrentMetadata(metadata) {
     const normalized = {...(metadata || {})};
     normalized.title = normalized.title || normalized.name || '';
@@ -212,6 +217,7 @@ export {
     torrentHash,
     isTorrentStopped,
     isTorrentDownloading,
+    qbtRefreshInterval,
     normalizeTorrentMetadata,
     parseTorrentTags,
     isTorrentMetadataTag,

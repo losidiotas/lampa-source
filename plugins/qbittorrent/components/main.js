@@ -5,7 +5,7 @@ import { qbtTranslate } from "../lang";
 import { TorrentComponent } from "./torrent";
 import { QBittorrentPlugin as QBittorrent } from "../qbittorrent";
 import { TorrentMenu } from "./torrent_menu";
-import { escapeHtml, isTorrentMetadataTag, normalizeTorrentMetadata, parseTorrentTags, torrentHash } from "../helpers";
+import { escapeHtml, isTorrentMetadataTag, normalizeTorrentMetadata, parseTorrentTags, qbtRefreshInterval, torrentHash } from "../helpers";
 
 const expandedTorrentClass = 'qbittorrent-plugin__row--expanded';
 const compactModeClass = 'qbittorrent-plugin--compact';
@@ -39,6 +39,7 @@ class MainComponent {
     torrentsComponentMap = {}
     destroyed = false
     autoUpdateTimeout = null
+    autoUpdateInterval = 3000
     syncPromise = null
 
     scroll = new Lampa.Scroll({
@@ -158,11 +159,12 @@ class MainComponent {
         this.activity.toggle();
 
         // Start auto-update
-        await this.startAutoUpdate();
+        await this.startAutoUpdate(data);
     }
 
-    async startAutoUpdate() {
+    async startAutoUpdate(initialData) {
         const client = this.qbittorrent;
+        this.autoUpdateInterval = qbtRefreshInterval(initialData, this.autoUpdateInterval);
 
         const update = async () => {
             if (this.destroyed) {
@@ -170,19 +172,20 @@ class MainComponent {
             }
 
             try {
-                await this.syncTorrents(client);
+                const data = await this.syncTorrents(client);
+                this.autoUpdateInterval = qbtRefreshInterval(data, this.autoUpdateInterval);
             } catch (e) {
                 if (!this.destroyed) {
                     console.error('[QBT]', 'Auto update', e);
                 }
             } finally {
                 if (!this.destroyed) {
-                    this.autoUpdateTimeout = setTimeout(update, 3000);
+                    this.autoUpdateTimeout = setTimeout(update, this.autoUpdateInterval);
                 }
             }
         };
 
-        this.autoUpdateTimeout = setTimeout(update, 3000);
+        this.autoUpdateTimeout = setTimeout(update, this.autoUpdateInterval);
     }
 
     async syncTorrents(client = this.qbittorrent) {
