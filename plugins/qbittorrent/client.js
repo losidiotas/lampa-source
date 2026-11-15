@@ -1,4 +1,4 @@
-import { ajax } from "./helpers";
+import { ajax, torrentHash } from "./helpers";
 
 class QBittorrentClient {
     #appVersion = 0.0
@@ -33,7 +33,7 @@ class QBittorrentClient {
         let params = {
             url: `${this.url}/api/v2/sync/maindata`,
             method: 'GET',
-            timeout: 0,
+            timeout: 30000,
             headers: this.#headers(),
             data: {
                 rid: rid ?? 0
@@ -73,7 +73,7 @@ class QBittorrentClient {
         }
 
         let data = {
-            hashes: torrent.infohash_v1,
+            hashes: torrentHash(torrent),
         }
 
         if (command.deleteFiles) {
@@ -106,7 +106,7 @@ class QBittorrentClient {
             method: 'POST',
             headers: this.#headers('application/x-www-form-urlencoded'),
             data: {
-                hashes: torrent.infohash_v1,
+                hashes: torrentHash(torrent),
                 tags: tags.join(',')
             }
         }

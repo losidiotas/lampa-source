@@ -347,6 +347,7 @@ export interface TransferInfo {
 }
 
 export interface TorrentDescription {
+    hash: string;
     added_on: number;
     amount_left: number;
     auto_tmm: boolean;

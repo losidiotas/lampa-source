@@ -1,6 +1,6 @@
 import { QBittorrentPlugin as QBittorrent, QBittorrentPlugin } from "../qbittorrent";
 import { qbtTranslate } from "../lang";
-import { lampaEditor } from "../helpers";
+import { escapeHtml, lampaEditor, torrentHash } from "../helpers";
 import { TMDBClient } from "../tmdb";
 
 function encodePathPreserveSlashes(p) {
@@ -72,7 +72,7 @@ class TorrentMenu {
         })
 
         Lampa.Select.show({
-            title: torrent.name,
+            title: escapeHtml(torrent.name),
             items: menuItems,
             onBack: function onBack() {
                 let currentController = Lampa.Controller.enabled();
@@ -143,7 +143,7 @@ class TorrentMenu {
 
     static async playVideoStream(torrent, urlGenerator) {
         let client = await QBittorrentPlugin.client()
-        let files = await client.files(torrent.infohash_v1)
+        let files = await client.files(torrentHash(torrent))
         files = files.sort((a, b) => {
             return a.name.localeCompare(b.name);
         })
@@ -162,7 +162,7 @@ class TorrentMenu {
         if (files.length === 1) {
             let url = urlGenerator(`${torrent.save_path}/${files[0].name}`)
             let video = {
-                title: torrent.name,
+                title: escapeHtml(torrent.name),
                 url: url,
                 subtitles: [],
                 timeline: Lampa.Timeline.view(Lampa.Utils.hash(url)),
@@ -186,10 +186,10 @@ class TorrentMenu {
             timelines[index] = timeline
 
             return {
-                title: `${timeline.percent === 100 ? '<span class="qbt-watched-icon">✔ </span>': ''}${file.name} (${timeline.percent}%)`,
+                title: `${timeline.percent === 100 ? '<span class="qbt-watched-icon">✔ </span>': ''}${escapeHtml(file.name)} (${timeline.percent}%)`,
                 onSelect: () => {
                     let video = {
-                        title: file.name,
+                        title: escapeHtml(file.name),
                         url: url,
                         subtitles: [],
                         timeline: timeline,
@@ -223,7 +223,7 @@ class TorrentMenu {
                                 let timeline = Lampa.Timeline.view(hash)
 
                                 return {
-                                    title: file.name,
+                                    title: escapeHtml(file.name),
                                     url: url,
                                     subtitles: [],
                                     timeline: timeline,
@@ -326,8 +326,11 @@ class TorrentMenu {
 
             // Format menu items with title and date information
             let menuItems = results.map(function (result) {
+                const title = `${result.title || result.name || ''} (${result.media_type || ''})` +
+                    (result.media_type === 'tv' && result.first_air_date ? ` - ${result.first_air_date}` : '') +
+                    (result.media_type === 'movie' && result.release_date ? ` - ${result.release_date}` : '');
                 return {
-                    title: "".concat(result.title || result.name, " (").concat(result.media_type, ")") + (result.media_type === 'tv' && result.first_air_date ? " - ".concat(result.first_air_date) : '') + (result.media_type === 'movie' && result.release_date ? " - ".concat(result.release_date) : ''),
+                    title: escapeHtml(title),
                     result: result,
                     id: result.id
                 };
@@ -365,9 +368,10 @@ class TorrentMenu {
 
     static async saveTorrentMetadata(torrent, metadata) {
         let db = await QBittorrent.database()
+        const hash = torrentHash(torrent);
 
-        return db.rewriteData('metadata', torrent.infohash_v1, {
-            hash: torrent.infohash_v1,
+        return db.rewriteData('metadata', hash, {
+            hash: hash,
             tmdb_id: metadata.id,
             media_type: metadata.media_type,
             overview: metadata.overview,
@@ -399,7 +403,7 @@ class TorrentMenu {
 
     static async showFilesPriorityMenu(torrent) {
         let client = await QBittorrentPlugin.client()
-        let files = await client.files(torrent.infohash_v1)
+        let files = await client.files(torrentHash(torrent))
         console.log('[QBT]', 'showFilesPriorityMenu', torrent)
         console.log('[QBT]', 'files', files)
     }

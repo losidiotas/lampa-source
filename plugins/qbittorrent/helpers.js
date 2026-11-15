@@ -12,6 +12,26 @@ function ucfirst(string) {
     return string.charAt(0).toUpperCase() + String(string).slice(1);
 }
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, function (character) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;',
+        }[character];
+    });
+}
+
+function torrentHash(torrent, fallback = '') {
+    if (!torrent) {
+        return String(fallback || '');
+    }
+
+    return String(torrent.hash || fallback || torrent.infohash_v1 || torrent.infohash_v2 || '');
+}
+
 function lampaEditor(params) {
     return new Promise(function (resolve) {
         Lampa.Input.edit(params, function (value) {
@@ -142,5 +162,7 @@ export {
     parseURL,
     parseQuery,
     magnetExactTopic,
+    escapeHtml,
+    torrentHash,
 }
 

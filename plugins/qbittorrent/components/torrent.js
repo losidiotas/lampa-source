@@ -1,5 +1,5 @@
 import { qbtTranslate } from "../lang";
-import { ucfirst } from "../helpers";
+import { escapeHtml, torrentHash, ucfirst } from "../helpers";
 import { TMDBClient } from "../tmdb";
 
 function isUploading(torrent) {
@@ -13,25 +13,26 @@ class TorrentComponent {
      */
     constructor(torrent, metadata) {
         this.torrent = torrent;
-        this.metadata = metadata || {};
-        const metaTitle = metadata.title || metadata.name || '';
+        this.metadata = metadata || null;
+        const normalizedMetadata = metadata || {};
+        const metaTitle = normalizedMetadata.title || normalizedMetadata.name || '';
 
         this.item = Lampa.Template.get('qbtTorrentRow', {
-            title: metaTitle,
-            name: torrent.name,
-            hash: torrent.infohash_v1,
+            title: escapeHtml(metaTitle),
+            name: escapeHtml(torrent.name),
+            hash: escapeHtml(torrentHash(torrent)),
             totalSize: Lampa.Utils.bytesToSize(torrent.total_size),
             origState: torrent.state,
             uploadState: isUploading(torrent) ? 'uploading' : '',
-            state: qbtTranslate(ucfirst(torrent.state)),
+            state: escapeHtml(qbtTranslate(ucfirst(torrent.state))),
             dlspeed: Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true),
             upspeed: Lampa.Utils.bytesToSize(torrent.upspeed * 8, true),
             progress: (torrent.progress * 100).toFixed(2),
             numSeeds: torrent.num_seeds,
             numLeechs: torrent.num_leechs,
-            overview: this.metadata.overview || '',
-            release_date: this.metadata.release_date ? this.metadata.release_date.substring(0, 4) : '',
-            poster: TMDBClient.posterURL(this.metadata.poster_path),
+            overview: escapeHtml(normalizedMetadata.overview || ''),
+            release_date: normalizedMetadata.release_date ? escapeHtml(normalizedMetadata.release_date.substring(0, 4)) : '',
+            poster: escapeHtml(TMDBClient.posterURL(normalizedMetadata.poster_path)),
             modificators: [
                 metadata ? 'qbittorrent-plugin__row--has-metadata' : '',
                 metadata && metaTitle === torrent.name ? 'qbittorrent-plugin__row--hide-name' : '',
@@ -60,29 +61,31 @@ class TorrentComponent {
      * @param metadata {object}
      */
     update(torrent, metadata) {
-        const metaTitle = metadata.title || metadata.name || '';
+        const hasMetadata = !!metadata;
+        const normalizedMetadata = metadata || {};
+        const metaTitle = normalizedMetadata.title || normalizedMetadata.name || '';
 
         let patches = [
-            {"field": "name", "method": "html", "value": torrent.name},
-            {"field": "totalSize", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.total_size)},
-            {"field": "state", "method": "html", "value": qbtTranslate(ucfirst(torrent.state))},
-            {"field": "progress", "method": "html", "value": (torrent.progress * 100).toFixed(2)},
-            {"field": "numSeeds", "method": "html", "value": torrent.num_seeds},
-            {"field": "numLeechs", "method": "html", "value": torrent.num_leechs},
-            {"field": "title", "method": "html", "value": metaTitle},
-            {"field": "overview", "method": "html", "value": metadata.overview || ''},
+            {"field": "name", "method": "text", "value": torrent.name},
+            {"field": "totalSize", "method": "text", "value": Lampa.Utils.bytesToSize(torrent.total_size)},
+            {"field": "state", "method": "text", "value": qbtTranslate(ucfirst(torrent.state))},
+            {"field": "progress", "method": "text", "value": (torrent.progress * 100).toFixed(2)},
+            {"field": "numSeeds", "method": "text", "value": torrent.num_seeds},
+            {"field": "numLeechs", "method": "text", "value": torrent.num_leechs},
+            {"field": "title", "method": "text", "value": metaTitle},
+            {"field": "overview", "method": "text", "value": normalizedMetadata.overview || ''},
             {
                 "field": "releaseDate",
-                "method": "html",
-                "value": metadata.release_date ? metadata.release_date.substring(0, 4) : ''
+                "method": "text",
+                "value": normalizedMetadata.release_date ? normalizedMetadata.release_date.substring(0, 4) : ''
             },
             {
                 "field": "poster",
-                "method": "html",
-                "value": metadata.poster_path ? TMDBClient.posterURL(metadata.poster_path) : './img/img_load.svg'
+                "method": "attr",
+                "value": normalizedMetadata.poster_path ? TMDBClient.posterURL(normalizedMetadata.poster_path) : './img/img_load.svg'
             },
-            {"field": "dlspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true)},
-            {"field": "upspeed", "method": "html", "value": Lampa.Utils.bytesToSize(torrent.upspeed * 8, true)},
+            {"field": "dlspeed", "method": "text", "value": Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true)},
+            {"field": "upspeed", "method": "text", "value": Lampa.Utils.bytesToSize(torrent.upspeed * 8, true)},
             {
                 "field": "dlspeed-container",
                 "method": "class",
@@ -101,9 +104,16 @@ class TorrentComponent {
 
         for (let patch of patches) {
             let element = this.render().find(`[data-qbittorrent-filed="${patch.field}"]`)
+            if (!element.length) {
+                continue;
+            }
+
             switch (patch.method) {
-                case "html":
-                    element.html(patch.value);
+                case "text":
+                    element.text(patch.value);
+                    break
+                case "attr":
+                    element.attr('src', patch.value);
                     break
                 case "class":
                     if (patch.value) {
@@ -115,8 +125,10 @@ class TorrentComponent {
             }
         }
 
-        if (!metadata) {
+        if (!hasMetadata) {
             this.render().get(0).classList.remove("qbittorrent-plugin__row--has-metadata")
+            this.render().get(0).classList.remove("qbittorrent-plugin__row--has-title")
+            this.render().get(0).classList.remove("qbittorrent-plugin__row--hide-name")
         } else {
             this.render().get(0).classList.add("qbittorrent-plugin__row--has-metadata")
 
@@ -127,11 +139,13 @@ class TorrentComponent {
             }
             if (metaTitle === torrent.name) {
                 this.render().get(0).classList.add("qbittorrent-plugin__row--hide-name")
+            } else {
+                this.render().get(0).classList.remove("qbittorrent-plugin__row--hide-name")
             }
         }
 
         this.torrent = torrent
-        this.metadata = metadata
+        this.metadata = metadata || null
     };
 }
 

@@ -48,7 +48,8 @@ class TMDBClient {
             return './img/img_load.svg';
         }
 
-        return Lampa.TMDB.image("t/p/") + (Lampa.Storage.field('poster_size') || 'w200') + posterPath;
+        const size = Lampa.Storage.field('poster_size') || 'w200';
+        return Lampa.TMDB.image(`t/p/${size}${posterPath}`);
     }
 
     static cleanTorrentName(name) {

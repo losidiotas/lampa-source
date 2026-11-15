@@ -3,8 +3,9 @@ import { TMDBClient } from "../tmdb";
 import { HeaderComponent } from "./header";
 import { qbtTranslate } from "../lang";
 import { TorrentComponent } from "./torrent";
-import { QBittorrentPlugin, QBittorrentPlugin as QBittorrent } from "../qbittorrent";
+import { QBittorrentPlugin as QBittorrent } from "../qbittorrent";
 import { TorrentMenu } from "./torrent_menu";
+import { escapeHtml, torrentHash } from "../helpers";
 
 const expandedTorrentClass = 'qbittorrent-plugin__row--expanded';
 const compactModeClass = 'qbittorrent-plugin--compact';
@@ -36,6 +37,9 @@ class MainComponent {
      * @type {TorrentComponent}
      */
     torrentsComponentMap = {}
+    destroyed = false
+    autoUpdateTimeout = null
+    syncPromise = null
 
     scroll = new Lampa.Scroll({
         mask: true,
@@ -52,8 +56,14 @@ class MainComponent {
             let data = await this.qbittorrent.syncMainData()
             await this.buildUI(data)
         } catch (e) {
-            Lampa.Noty.show(e)
+            if (this.destroyed) {
+                return;
+            }
+
+            Lampa.Noty.show(escapeHtml(e && e.message ? e.message : String(e)))
             this.renderError(e)
+            this.activity.loader(false)
+            this.activity.toggle()
         }
     }
 
@@ -126,6 +136,10 @@ class MainComponent {
      * @param data {MainData}
      */
     async buildUI(data) {
+        if (this.destroyed) {
+            return;
+        }
+
         this.scroll.minus(undefined);
 
         // Assemble UI
@@ -133,6 +147,10 @@ class MainComponent {
         this.setCompactMode(Lampa.Storage.get(compactModeStorageKey, false), false);
         this.setSortMode(Lampa.Storage.get(sortModeStorageKey, sortModeDate), false);
         await this.renderTorrentsList(data);
+        if (this.destroyed) {
+            return;
+        }
+
         this.scroll.append(this.head);
         this.scroll.append(this.body);
         this.html.append(this.scroll.render());
@@ -144,25 +162,76 @@ class MainComponent {
     }
 
     async startAutoUpdate() {
-        let client = await QBittorrentPlugin.client();
-        this.autoUpdateInterval = setInterval(async () => {
-            let maindata = await client.syncMainData()
-            await this.updateTorrents(maindata);
-        }, 3000)
+        const client = this.qbittorrent;
+
+        const update = async () => {
+            if (this.destroyed) {
+                return;
+            }
+
+            try {
+                await this.syncTorrents(client);
+            } catch (e) {
+                if (!this.destroyed) {
+                    console.error('[QBT]', 'Auto update', e);
+                }
+            } finally {
+                if (!this.destroyed) {
+                    this.autoUpdateTimeout = setTimeout(update, 3000);
+                }
+            }
+        };
+
+        this.autoUpdateTimeout = setTimeout(update, 3000);
+    }
+
+    async syncTorrents(client = this.qbittorrent) {
+        if (!this.syncPromise) {
+            this.syncPromise = (async () => {
+                const data = await client.syncMainData();
+                if (!this.destroyed) {
+                    await this.updateTorrents(data);
+                }
+                return data;
+            })();
+        }
+
+        const currentSync = this.syncPromise;
+        try {
+            return await currentSync;
+        } finally {
+            if (this.syncPromise === currentSync) {
+                this.syncPromise = null;
+            }
+        }
     }
 
     async updateTorrents(maindata) {
+        if (this.destroyed) {
+            return;
+        }
+
+        const torrents = maindata.torrents || {};
         for (let hash in this.torrentsComponentMap) {
-            if (!maindata.torrents[hash]) {
+            if (!torrents[hash]) {
                 this.removeTorrent(hash)
             }
         }
 
-        for (let hash in maindata.torrents) {
-            let torrent = maindata.torrents[hash];
+        for (let hash in torrents) {
+            if (this.destroyed) {
+                return;
+            }
+
+            let torrent = torrents[hash];
+            torrent.hash = torrentHash(torrent, hash);
             let component = this.torrentsComponentMap[hash];
             if (!component) {
-                await this.addNewTorrent(torrent)
+                await this.addNewTorrent(torrent, hash)
+
+                if (this.destroyed) {
+                    return;
+                }
 
                 // to fix focus
                 Lampa.Controller.toggle('content');
@@ -178,12 +247,19 @@ class MainComponent {
     /**
      * @param torrent {TorrentDescription}
      */
-    async addNewTorrent(torrent) {
+    async addNewTorrent(torrent, fallbackHash = '') {
+        const hash = torrentHash(torrent, fallbackHash);
+        torrent.hash = hash;
         let item = await this.createTorrentComponent(torrent)
+
+        if (this.destroyed) {
+            item.destroy();
+            return;
+        }
 
         this.body.append(item.render());
         this.items.push(item);
-        this.torrentsComponentMap[torrent.infohash_v1] = item;
+        this.torrentsComponentMap[hash] = item;
         this.sortTorrentComponents();
         this.scroll.update(item.render(), true);
     }
@@ -193,18 +269,34 @@ class MainComponent {
      */
     removeTorrent(hash) {
         let component = this.torrentsComponentMap[hash];
-        component.destroy()
-        let index = this.items.indexOf(component);
-        this.items.splice(index, 1);
-        if (this.active === index) {
-            this.active = this.active - 1;
-            if (this.active < 0) {
-                this.active = 0;
-            }
+        if (!component || !this.items) {
+            return;
         }
 
-        this.scroll.update(this.items[this.active].render(), true);
+        const activeItem = this.items[this.active];
+        const index = this.items.indexOf(component);
+        if (index < 0) {
+            delete this.torrentsComponentMap[hash];
+            return;
+        }
+
+        component.destroy()
+        this.items.splice(index, 1);
+
+        if (activeItem === component) {
+            this.active = Math.min(index, this.items.length - 1);
+        } else {
+            const activeIndex = this.items.indexOf(activeItem);
+            this.active = activeIndex >= 0 ? activeIndex : 0;
+        }
+
         delete this.torrentsComponentMap[hash];
+
+        const nextItem = this.items[this.active];
+        if (nextItem) {
+            this.last = nextItem.render()[0];
+            this.scroll.update(nextItem.render(), true);
+        }
     }
 
     /**
@@ -223,15 +315,17 @@ class MainComponent {
         $item.find('[data-qbt-refresh]').on('hover:enter', async () => {
             Lampa.Loading.start(() => {}, qbtTranslate('LoadingPleaseWait'));
             try {
-                const data = await this.qbittorrent.syncMainData();
-                await this.updateTorrents(data);
+                const data = await this.syncTorrents();
+                if (!data || this.destroyed) {
+                    return;
+                }
                 this.head.find('[data-qbt-free-space]').html(
                     Lampa.Utils.bytesToSize(data.server_state.free_space_on_disk)
                 );
                 Lampa.Noty.show(qbtTranslate('Reloaded'));
             } catch (e) {
                 console.error('[QBT]', 'Refresh', e);
-                Lampa.Noty.show(e);
+                Lampa.Noty.show(escapeHtml(e && e.message ? e.message : String(e)));
             } finally {
                 Lampa.Loading.stop();
             }
@@ -301,6 +395,10 @@ class MainComponent {
     }
 
     sortTorrentComponents(preserveActive = true) {
+        if (!this.items || !this.items.length) {
+            return;
+        }
+
         const header = this.items[0];
         const currentItems = this.items.slice(1);
         const sortedItems = currentItems.slice().sort(this.compareTorrentComponents.bind(this));
@@ -324,13 +422,19 @@ class MainComponent {
      * @param data {MainData}
      */
     async renderTorrentsList(data) {
-        const torrents = Object.values(data.torrents);
+        const torrents = Object.entries(data.torrents || {});
 
-        for (const torrent of torrents) {
+        for (const [fallbackHash, torrent] of torrents) {
+            const hash = torrentHash(torrent, fallbackHash);
+            torrent.hash = hash;
             const item = await this.createTorrentComponent(torrent);
+            if (this.destroyed) {
+                item.destroy();
+                return;
+            }
             this.body.append(item.render());
             this.items.push(item);
-            this.torrentsComponentMap[torrent.infohash_v1] = item;
+            this.torrentsComponentMap[hash] = item;
         }
 
         this.sortTorrentComponents();
@@ -341,8 +445,12 @@ class MainComponent {
      * @param metadata {object}
      */
     rerenderTorrent(torrent, metadata) {
-        let existItem = this.html.find(`#qbittorrent-plugin-torrent-${torrent.infohash_v1}`);
-        let component = this.torrentsComponentMap[torrent.infohash_v1];
+        const hash = torrentHash(torrent);
+        let existItem = this.html.find(`#qbittorrent-plugin-torrent-${hash}`);
+        let component = this.torrentsComponentMap[hash];
+        if (!existItem.length || !component) {
+            return;
+        }
         let wasExpanded = existItem.hasClass(expandedTorrentClass);
         let newItem = new TorrentComponent(torrent, metadata).render();
         let newHtml = newItem.html()
@@ -361,24 +469,30 @@ class MainComponent {
      */
     renderError(err) {
         console.error(err)
-        this.html.append(`<div>Что-то пошло не так: ${JSON.stringify(err)}</div>`)
+        const message = err && err.message ? err.message : JSON.stringify(err);
+        this.html.append($('<div></div>').text(`Что-то пошло не так: ${message || String(err)}`))
     }
 
     destroy() {
-        if (this.autoUpdateInterval) {
-            clearInterval(this.autoUpdateInterval);
+        this.destroyed = true;
+        if (this.autoUpdateTimeout) {
+            clearTimeout(this.autoUpdateTimeout);
         }
-        Lampa.Arrays.destroy(this.items);
+        if (this.items) {
+            Lampa.Arrays.destroy(this.items);
+        }
         this.scroll.destroy();
         this.html.remove();
-        this.items = null;
+        this.items = [];
+        this.torrentsComponentMap = {};
     }
 
     async saveTorrentMetadata(torrent, metadata) {
         let db = await QBittorrent.database()
+        const hash = torrentHash(torrent);
 
-        return db.rewriteData('metadata', torrent.infohash_v1, {
-            hash: torrent.infohash_v1,
+        return db.rewriteData('metadata', hash, {
+            hash: hash,
             tmdb_id: metadata.id,
             media_type: metadata.media_type,
             overview: metadata.overview,
@@ -422,10 +536,11 @@ class MainComponent {
 
     async createTorrentComponent(torrent) {
         let db = await QBittorrent.database()
+        const hash = torrentHash(torrent);
 
         let metadata
         try {
-            metadata = await db.getData('metadata', torrent.infohash_v1)
+            metadata = await db.getData('metadata', hash)
         } catch (e) {
             metadata = null
             console.warn('[QBT]', 'Read metadata', e);
@@ -451,9 +566,15 @@ class MainComponent {
         };
 
         item.render().on('hover:focus', () => {
+            if (this.destroyed) {
+                return;
+            }
+
             this.last = item.render()[0];
             this.active = this.items.indexOf(item);
-            this.scroll.update(this.items[this.active].render(), true);
+            if (this.active >= 0) {
+                this.scroll.update(this.items[this.active].render(), true);
+            }
         }).on('hover:enter', () => {
             if (this.html.hasClass(compactModeClass)) {
                 item.render().toggleClass(expandedTorrentClass);

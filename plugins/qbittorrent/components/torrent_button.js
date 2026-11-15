@@ -1,6 +1,6 @@
 import { qbtTranslate } from "../lang";
 import { QBittorrentPlugin } from "../qbittorrent";
-import { ajax, magnetExactTopic } from "../helpers";
+import { ajax, escapeHtml, magnetExactTopic, torrentHash } from "../helpers";
 import { TorrentMenu } from "./torrent_menu";
 
 function listener(e) {
@@ -148,7 +148,7 @@ async function selectFiles(torrent) {
 
     let items = files.map((file, index) => {
         return {
-            title: file.path,
+            title: escapeHtml(file.path),
             checkbox: true,
             index: index,
             checked: true
@@ -228,29 +228,33 @@ async function addTorrentAndSetPriority(torrent, tag, options, skipPriority, nor
     }
 
     try {
-        let maxTries = 20;
-        let timeout = 500;
-        let filePrio = async (files, tryNumber, priority) => {
-            try {
-                await client.filePrio(our.infohash_v1, files, priority)
-            } catch (e) {
-                if (e.responseText === 'Torrent\'s metadata has not yet downloaded') {
-                    if (tryNumber < maxTries) {
-                        console.log('[QBT]', 'not ready yet, wait', timeout);
-                        await wait(timeout)
-                        await filePrio(tryNumber+1)
-                    } else {
-                        console.error('[QBT]', 'filePrio out of retries', e);
+        const maxTries = 20;
+        const timeout = 500;
+        const hash = torrentHash(our);
+        let filePrio = async (files, priority) => {
+            if (!files.length) {
+                return;
+            }
+
+            for (let tryNumber = 0; tryNumber < maxTries; tryNumber++) {
+                try {
+                    await client.filePrio(hash, files, priority)
+                    return;
+                } catch (e) {
+                    const metadataPending = e && e.responseText === 'Torrent\'s metadata has not yet downloaded';
+                    if (!metadataPending || tryNumber === maxTries - 1) {
+                        throw e;
                     }
-                } else {
-                    console.error('[QBT]', 'addTorrentAndSetPriority.filePrio', e);
+
+                    console.log('[QBT]', 'not ready yet, wait', timeout);
+                    await wait(timeout)
                 }
             }
         }
 
         console.log('[QBT]', 'send filePrio request')
-        await filePrio(skipPriority, 0, 0)
-        await filePrio(normalPriority, 0, 1)
+        await filePrio(skipPriority, 0)
+        await filePrio(normalPriority, 1)
         result.prioritySet = true;
     } catch (e) {
         console.error('[QBT]', 'addTorrentAndSetPriority', e);
@@ -293,6 +297,7 @@ async function findAlreadyAddedTorrent(torrent) {
     let magnet = torrent.MagnetUri ? torrent.MagnetUri : torrent.Link
     let topic = magnetExactTopic(magnet);
     for (let hash in data.torrents) {
+        data.torrents[hash].hash = torrentHash(data.torrents[hash], hash);
         let existTopic = magnetExactTopic(data.torrents[hash].magnet_uri);
         if (existTopic === topic) {
             return data.torrents[hash];
