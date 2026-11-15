@@ -1,6 +1,12 @@
 import { QBittorrentPlugin as QBittorrent, QBittorrentPlugin } from "../qbittorrent";
 import { qbtTranslate } from "../lang";
-import { escapeHtml, lampaEditor, torrentHash } from "../helpers";
+import {
+    escapeHtml,
+    isTorrentStopped,
+    lampaEditor,
+    normalizeTorrentMetadata,
+    torrentHash
+} from "../helpers";
 import { TMDBClient } from "../tmdb";
 
 function encodePathPreserveSlashes(p) {
@@ -33,19 +39,16 @@ class TorrentMenu {
             })
         }
 
-        switch (torrent.state) {
-            case 'pausedDL':
-            case 'pausedUP':
-                menuItems.push({
-                    title: qbtTranslate('Start'),
-                    action: 'start'
-                })
-                break
-            default:
-                menuItems.push({
-                    title: qbtTranslate('Stop'),
-                    action: 'stop'
-                })
+        if (isTorrentStopped(torrent.state)) {
+            menuItems.push({
+                title: qbtTranslate('Start'),
+                action: 'start'
+            })
+        } else {
+            menuItems.push({
+                title: qbtTranslate('Stop'),
+                action: 'stop'
+            })
         }
 
         // menuItems.push({
@@ -369,18 +372,19 @@ class TorrentMenu {
     static async saveTorrentMetadata(torrent, metadata) {
         let db = await QBittorrent.database()
         const hash = torrentHash(torrent);
+        const normalizedMetadata = normalizeTorrentMetadata(metadata);
 
         return db.rewriteData('metadata', hash, {
             hash: hash,
-            tmdb_id: metadata.id,
-            media_type: metadata.media_type,
-            overview: metadata.overview,
-            title: metadata.title || metadata.name,
-            poster_path: metadata.poster_path,
-            vote_average: metadata.vote_average,
-            vote_count: metadata.vote_count,
-            popularity: metadata.popularity,
-            release_date: metadata.release_date,
+            tmdb_id: normalizedMetadata.id,
+            media_type: normalizedMetadata.media_type,
+            overview: normalizedMetadata.overview,
+            title: normalizedMetadata.title,
+            poster_path: normalizedMetadata.poster_path,
+            vote_average: normalizedMetadata.vote_average,
+            vote_count: normalizedMetadata.vote_count,
+            popularity: normalizedMetadata.popularity,
+            release_date: normalizedMetadata.release_date,
             updated_at: Date.now()
         })
     }

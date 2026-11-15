@@ -26,8 +26,16 @@ function listener(e) {
         title: `<div class="qbittorrent-plugin-download-button">${qbtTranslate('AddToqBittorrent')}</div>`,
         onSelect: async () => {
             Lampa.Loading.start(() => {}, qbtTranslate('LoadingPleaseWait'));
-            let alreadyAddedTorrent = await findAlreadyAddedTorrent(selectedTorrent)
-            Lampa.Loading.stop();
+            let alreadyAddedTorrent;
+            try {
+                alreadyAddedTorrent = await findAlreadyAddedTorrent(selectedTorrent)
+            } catch (e) {
+                console.error('[QBT]', 'findAlreadyAddedTorrent', e);
+                Lampa.Noty.show(qbtTranslate('FailedAction'));
+                return;
+            } finally {
+                Lampa.Loading.stop();
+            }
 
             if (alreadyAddedTorrent) {
                 Lampa.Noty.show(qbtTranslate('AlreadyAddedTorrent'));
@@ -296,10 +304,14 @@ async function findAlreadyAddedTorrent(torrent) {
 
     let magnet = torrent.MagnetUri ? torrent.MagnetUri : torrent.Link
     let topic = magnetExactTopic(magnet);
+    if (!topic) {
+        return null;
+    }
+
     for (let hash in data.torrents) {
         data.torrents[hash].hash = torrentHash(data.torrents[hash], hash);
         let existTopic = magnetExactTopic(data.torrents[hash].magnet_uri);
-        if (existTopic === topic) {
+        if (existTopic && existTopic === topic) {
             return data.torrents[hash];
         }
     }

@@ -21,7 +21,18 @@ class TMDBClient {
             }
         }
 
-        return ajax(params)
+        const response = await ajax(params)
+        if (response && Array.isArray(response.results)) {
+            response.results = TMDBClient.filterSearchResults(response.results)
+        }
+
+        return response
+    }
+
+    static filterSearchResults(results) {
+        return (results || []).filter((result) => {
+            return result && (result.media_type === 'movie' || result.media_type === 'tv');
+        });
     }
 
     /**

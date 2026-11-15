@@ -32,6 +32,17 @@ function torrentHash(torrent, fallback = '') {
     return String(torrent.hash || fallback || torrent.infohash_v1 || torrent.infohash_v2 || '');
 }
 
+function isTorrentStopped(state) {
+    return ['pausedDL', 'pausedUP', 'stoppedDL', 'stoppedUP'].includes(state);
+}
+
+function normalizeTorrentMetadata(metadata) {
+    const normalized = {...(metadata || {})};
+    normalized.title = normalized.title || normalized.name || '';
+    normalized.release_date = normalized.release_date || normalized.first_air_date || '';
+    return normalized;
+}
+
 function lampaEditor(params) {
     return new Promise(function (resolve) {
         Lampa.Input.edit(params, function (value) {
@@ -45,9 +56,20 @@ function lampaEditor(params) {
  * @return {string}
  */
 function magnetExactTopic(uri) {
-    let parsed = parseURL(uri);
+    if (typeof uri !== 'string' || !uri) {
+        return null;
+    }
 
-    return parsed.query['xt'].toLowerCase();
+    let parsed;
+    try {
+        parsed = parseURL(uri);
+    } catch (e) {
+        return null;
+    }
+
+    const exactTopic = parsed.query && parsed.query['xt'];
+    const value = Array.isArray(exactTopic) ? exactTopic[0] : exactTopic;
+    return typeof value === 'string' && value ? value.toLowerCase() : null;
 }
 
 function parseURL(url) {
@@ -164,5 +186,7 @@ export {
     magnetExactTopic,
     escapeHtml,
     torrentHash,
+    isTorrentStopped,
+    normalizeTorrentMetadata,
 }
 

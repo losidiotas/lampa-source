@@ -1,6 +1,12 @@
 import { expect, suite, test } from 'vitest'
 
-import { escapeHtml, torrentHash } from '../plugins/qbittorrent/helpers'
+import {
+    escapeHtml,
+    isTorrentStopped,
+    magnetExactTopic,
+    normalizeTorrentMetadata,
+    torrentHash,
+} from '../plugins/qbittorrent/helpers'
 import { TorrentComponent } from '../plugins/qbittorrent/components/torrent'
 import { TMDBClient } from '../plugins/qbittorrent/tmdb'
 
@@ -72,5 +78,40 @@ suite('qBittorrent helpers', () => {
         } finally {
             globalThis.Lampa = originalLampa
         }
+    })
+
+    test('recognizes stopped states from qBittorrent 4 and 5', () => {
+        expect(isTorrentStopped('pausedDL')).toBe(true)
+        expect(isTorrentStopped('pausedUP')).toBe(true)
+        expect(isTorrentStopped('stoppedDL')).toBe(true)
+        expect(isTorrentStopped('stoppedUP')).toBe(true)
+        expect(isTorrentStopped('downloading')).toBe(false)
+    })
+
+    test('safely extracts magnet topics and ignores regular torrent URLs', () => {
+        expect(magnetExactTopic('magnet:?xt=URN%3ABTIH%3AABC123')).toBe('urn:btih:abc123')
+        expect(magnetExactTopic('https://example.com/file.torrent')).toBe(null)
+        expect(magnetExactTopic(undefined)).toBe(null)
+    })
+
+    test('normalizes TV metadata for the persistent cache', () => {
+        expect(normalizeTorrentMetadata({
+            name: 'Series title',
+            first_air_date: '2025-01-02',
+        })).toMatchObject({
+            title: 'Series title',
+            release_date: '2025-01-02',
+        })
+    })
+
+    test('keeps only movies and TV shows in TMDB multi-search results', () => {
+        expect(TMDBClient.filterSearchResults([
+            {id: 1, media_type: 'person'},
+            {id: 2, media_type: 'movie'},
+            {id: 3, media_type: 'tv'},
+        ])).toEqual([
+            {id: 2, media_type: 'movie'},
+            {id: 3, media_type: 'tv'},
+        ])
     })
 })
