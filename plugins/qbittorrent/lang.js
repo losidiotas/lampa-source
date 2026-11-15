@@ -300,6 +300,18 @@ function InstallLanguagePack() {
             en: "Full view",
             ru: "Развернуто"
         },
+        qbtSeason: {
+            en: "Season",
+            ru: "Сезон"
+        },
+        qbtSeasons: {
+            en: "Seasons",
+            ru: "Сезоны"
+        },
+        qbtEpisode: {
+            en: "Episode",
+            ru: "Серия"
+        },
         qbtPlayAll: {
             en: "Play all",
             ru: "Воспроизвести всё"

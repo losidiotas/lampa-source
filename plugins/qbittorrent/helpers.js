@@ -72,6 +72,98 @@ function replaceTorrentMetadataTag(tags, replacement) {
     return updatedTags;
 }
 
+function isTorrentSeries(torrent, metadata) {
+    const normalizedMetadata = metadata || {};
+    if (normalizedMetadata.media_type === 'tv' || normalizedMetadata.first_air_date || normalizedMetadata.number_of_seasons) {
+        return true;
+    }
+
+    return parseTorrentTags(torrent && torrent.tags).some((tag) => /^tv\/\d+$/.test(tag));
+}
+
+function parseTorrentSeriesInfo(title) {
+    const value = String(title || '');
+    if (!value) {
+        return null;
+    }
+
+    const seasonWord = '(?:сезон(?:ы|а|ов|и|ів)?|seasons?)';
+    let season = null;
+    let multipleSeasons = false;
+    let match = value.match(new RegExp(`${seasonWord}\\s*:?\\s*(\\d{1,2}(?:\\s*,\\s*\\d{1,2})+)`, 'i'));
+
+    if (match) {
+        season = match[1]
+            .split(',')
+            .map((number) => String(parseInt(number.trim(), 10)))
+            .join(', ');
+        multipleSeasons = true;
+    } else {
+        match = value.match(/\bS(\d{1,2})\s*[-–]\s*S?(\d{1,2})\b/i) ||
+            value.match(new RegExp(`(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})\\s*${seasonWord}`, 'i')) ||
+            value.match(new RegExp(`${seasonWord}\\s*:?\\s*(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})`, 'i'));
+
+        if (match) {
+            season = `${parseInt(match[1], 10)}–${parseInt(match[2], 10)}`;
+            multipleSeasons = true;
+        } else {
+            match = value.match(new RegExp(`${seasonWord}\\s*:?\\s*(\\d{1,2})`, 'i')) ||
+                value.match(new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s*${seasonWord}`, 'i')) ||
+                value.match(/\bS(\d{1,2})(?:[ ._-]*E\d{1,3})?\b/i) ||
+                value.match(/\b(\d{1,2})x\d{1,3}\b/i) ||
+                value.match(/(?:тв|tv)-(\d{1,2})/i);
+
+            if (match) {
+                season = String(parseInt(match[1], 10));
+            }
+        }
+    }
+
+    const hasEpisodeRange = [
+        /\bS\d{1,2}[ ._-]*E\d{1,3}\s*[-–]\s*(?:E\s*)?\d{1,3}\b/i,
+        /\b\d{1,2}x\d{1,3}\s*[-–]\s*\d{1,3}\b/i,
+        /(?:серии|серії|episodes?)\s*:?\s*\d{1,3}\s*[-–]\s*\d{1,3}/i,
+        /\d{1,3}\s*[-–]\s*\d{1,3}\s*(?:серии|серії|episodes?)/i,
+    ].some((pattern) => pattern.test(value));
+
+    let episode = null;
+    if (!hasEpisodeRange) {
+        match = value.match(/\bS\d{1,2}[ ._-]*E(\d{1,3})(?!\s*[-–])/i) ||
+            value.match(/\b\d{1,2}x(\d{1,3})(?!\s*[-–])/i) ||
+            value.match(/\b(?:E|EP)[ ._-]?(\d{1,3})(?!\s*[-–])/i) ||
+            value.match(/(?:серия|серія|episode)\s*:?\s*(\d{1,3})(?!\s*[-–])/i) ||
+            value.match(/(\d{1,3})\s*(?:серия|серія|episode)(?![a-zа-яіїє])/i);
+
+        if (match) {
+            episode = parseInt(match[1], 10);
+        }
+    }
+
+    return season || episode !== null ? {season, multipleSeasons, episode} : null;
+}
+
+function torrentSeriesLabel(torrent, metadata, labels) {
+    if (!isTorrentSeries(torrent, metadata)) {
+        return '';
+    }
+
+    const info = parseTorrentSeriesInfo(torrent && torrent.name);
+    if (!info) {
+        return '';
+    }
+
+    const translated = labels || {};
+    const parts = [];
+    if (info.season) {
+        parts.push(`${info.multipleSeasons ? translated.seasons : translated.season} ${info.season}`.trim());
+    }
+    if (info.episode !== null) {
+        parts.push(`${translated.episode || ''} ${info.episode}`.trim());
+    }
+
+    return parts.join(' · ');
+}
+
 function lampaEditor(params) {
     return new Promise(function (resolve) {
         Lampa.Input.edit(params, function (value) {
@@ -222,4 +314,7 @@ export {
     parseTorrentTags,
     isTorrentMetadataTag,
     replaceTorrentMetadataTag,
+    isTorrentSeries,
+    parseTorrentSeriesInfo,
+    torrentSeriesLabel,
 }

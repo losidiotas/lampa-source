@@ -32,6 +32,9 @@
     }
 
     &--has-title {
+      .qbittorrent-plugin__row_heading {
+        display: flex;
+      }
       .qbittorrent-plugin__row_title {
         display: block;
       }
@@ -52,6 +55,30 @@
     display: none;
   }
 
+  &__row_heading {
+    display: none;
+    align-items: flex-start;
+    gap: 1em;
+  }
+
+  &__row_series {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 0.15em 0.45em;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.3em;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.05em;
+    font-weight: bold;
+    line-height: 1.2;
+    white-space: nowrap;
+
+    &:empty {
+      display: none;
+    }
+  }
+
   &__row_footer {
     display: flex;
     justify-content: space-between;
@@ -70,6 +97,8 @@
   }
 
   &__row_title {
+    flex: 1;
+    min-width: 0;
     font-size: 1.3em;
     word-break: break-word;
     font-weight: bold;

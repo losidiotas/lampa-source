@@ -7,9 +7,11 @@ import {
     isTorrentStopped,
     magnetExactTopic,
     normalizeTorrentMetadata,
+    parseTorrentSeriesInfo,
     parseTorrentTags,
     qbtRefreshInterval,
     replaceTorrentMetadataTag,
+    torrentSeriesLabel,
     torrentHash,
 } from '../plugins/qbittorrent/helpers'
 import { TorrentComponent } from '../plugins/qbittorrent/components/torrent'
@@ -141,5 +143,55 @@ suite('qBittorrent helpers', () => {
             '4k',
             'movie/30',
         ])
+    })
+
+    test('formats an explicitly numbered TV season and single episode', () => {
+        expect(torrentSeriesLabel(
+            {name: 'Example.Show.S02E05.1080p', tags: 'tv/42'},
+            {media_type: 'tv'},
+            {season: 'Season', seasons: 'Seasons', episode: 'Episode'}
+        )).toBe('Season 2 · Episode 5')
+
+        expect(torrentSeriesLabel(
+            {name: 'Сериал (Сезон 1, Серия 4)', tags: 'tv/42'},
+            {},
+            {season: 'Сезон', seasons: 'Сезоны', episode: 'Серия'}
+        )).toBe('Сезон 1 · Серия 4')
+    })
+
+    test('shows multiple seasons but omits episode ranges', () => {
+        expect(torrentSeriesLabel(
+            {name: 'Игра престолов [1-8 сезоны: 1-73 серии]', tags: 'tv/1399'},
+            {media_type: 'tv'},
+            {season: 'Сезон', seasons: 'Сезоны', episode: 'Серия'}
+        )).toBe('Сезоны 1–8')
+
+        expect(torrentSeriesLabel(
+            {name: 'From [04x01-07 из 10]', tags: 'tv/124364'},
+            {media_type: 'tv'},
+            {season: 'Season', seasons: 'Seasons', episode: 'Episode'}
+        )).toBe('Season 4')
+    })
+
+    test('supports non-contiguous season lists', () => {
+        expect(parseTorrentSeriesInfo('Рик и Морти / Сезон: 1, 2 / Серии: 1-21')).toEqual({
+            season: '1, 2',
+            multipleSeasons: true,
+            episode: null,
+        })
+    })
+
+    test('does not label movies or TV torrents without explicit season information', () => {
+        const labels = {season: 'Season', seasons: 'Seasons', episode: 'Episode'}
+        expect(torrentSeriesLabel(
+            {name: 'A.Movie.S02E05.1080p', tags: 'movie/10'},
+            {media_type: 'movie'},
+            labels
+        )).toBe('')
+        expect(torrentSeriesLabel(
+            {name: 'Series title (2025)', tags: 'tv/20'},
+            {media_type: 'tv'},
+            labels
+        )).toBe('')
     })
 })

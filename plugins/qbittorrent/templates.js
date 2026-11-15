@@ -20,7 +20,10 @@ function RegisterTemplates() {
                 <img data-qbittorrent-filed="poster" src="{poster}" alt="{name}" class="qbittorrent-plugin__row_poster_img"/>
             </div>
             <div class="qbittorrent-plugin__row_description">
-                <div data-qbittorrent-filed="title" class="qbittorrent-plugin__row_title">{title}</div>
+                <div class="qbittorrent-plugin__row_heading">
+                    <div data-qbittorrent-filed="title" class="qbittorrent-plugin__row_title">{title}</div>
+                    <div data-qbittorrent-filed="seriesInfo" class="qbittorrent-plugin__row_series">{seriesInfo}</div>
+                </div>
                 <div data-qbittorrent-filed="name" class="qbittorrent-plugin__row_name">{name}</div>
                 <div data-qbittorrent-filed="overview" class="qbittorrent-plugin__row_overview">{overview}</div>
                 <div data-qbittorrent-filed="footer"  class="qbittorrent-plugin__row_footer {origState} {downloadState} {uploadState}">

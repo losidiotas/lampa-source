@@ -1,9 +1,17 @@
 import { qbtTranslate } from "../lang";
-import { escapeHtml, isTorrentDownloading, torrentHash, ucfirst } from "../helpers";
+import { escapeHtml, isTorrentDownloading, torrentHash, torrentSeriesLabel, ucfirst } from "../helpers";
 import { TMDBClient } from "../tmdb";
 
 function isUploading(torrent) {
     return torrent.state === 'uploading' || torrent.state === 'forcedUP';
+}
+
+function seriesLabel(torrent, metadata) {
+    return torrentSeriesLabel(torrent, metadata, {
+        season: qbtTranslate('Season'),
+        seasons: qbtTranslate('Seasons'),
+        episode: qbtTranslate('Episode'),
+    });
 }
 
 class TorrentComponent {
@@ -19,6 +27,7 @@ class TorrentComponent {
 
         this.item = Lampa.Template.get('qbtTorrentRow', {
             title: escapeHtml(metaTitle),
+            seriesInfo: escapeHtml(seriesLabel(torrent, metadata)),
             name: escapeHtml(torrent.name),
             hash: escapeHtml(torrentHash(torrent)),
             totalSize: Lampa.Utils.bytesToSize(torrent.total_size),
@@ -74,6 +83,7 @@ class TorrentComponent {
             {"field": "numSeeds", "method": "text", "value": torrent.num_seeds},
             {"field": "numLeechs", "method": "text", "value": torrent.num_leechs},
             {"field": "title", "method": "text", "value": metaTitle},
+            {"field": "seriesInfo", "method": "text", "value": seriesLabel(torrent, metadata)},
             {"field": "overview", "method": "text", "value": normalizedMetadata.overview || ''},
             {
                 "field": "releaseDate",
