@@ -1,5 +1,5 @@
 import { qbtTranslate } from "../lang";
-import { escapeHtml, torrentHash, ucfirst } from "../helpers";
+import { escapeHtml, isTorrentDownloading, torrentHash, ucfirst } from "../helpers";
 import { TMDBClient } from "../tmdb";
 
 function isUploading(torrent) {
@@ -23,6 +23,7 @@ class TorrentComponent {
             hash: escapeHtml(torrentHash(torrent)),
             totalSize: Lampa.Utils.bytesToSize(torrent.total_size),
             origState: torrent.state,
+            downloadState: isTorrentDownloading(torrent.state) ? 'downloading' : '',
             uploadState: isUploading(torrent) ? 'uploading' : '',
             state: escapeHtml(qbtTranslate(ucfirst(torrent.state))),
             dlspeed: Lampa.Utils.bytesToSize(torrent.dlspeed * 8, true),
@@ -90,7 +91,7 @@ class TorrentComponent {
                 "field": "dlspeed-container",
                 "method": "class",
                 "class": "downloading",
-                "value": torrent.state === 'downloading'
+                "value": isTorrentDownloading(torrent.state)
             },
             {
                 "field": "upspeed-container",
@@ -98,7 +99,7 @@ class TorrentComponent {
                 "class": "uploading",
                 "value": isUploading(torrent)
             },
-            {"field": "footer", "method": "class", "class": "downloading", "value": torrent.state === 'downloading'},
+            {"field": "footer", "method": "class", "class": "downloading", "value": isTorrentDownloading(torrent.state)},
             {"field": "footer", "method": "class", "class": "uploading", "value": isUploading(torrent)},
         ];
 

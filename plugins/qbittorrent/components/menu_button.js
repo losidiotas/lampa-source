@@ -24,11 +24,19 @@ function createMenuButton() {
 
 class MenuButton {
     static show() {
-        $('.menu .menu__list').eq(0).append(createMenuButton());
+        const menu = $('.menu .menu__list').eq(0);
+        const existingButtons = menu.find(`[id="${buttonId}"]`);
+
+        if (existingButtons.length) {
+            existingButtons.slice(1).off('hover:enter').remove();
+            return;
+        }
+
+        menu.append(createMenuButton());
     }
 
     static hide() {
-        $(`#${buttonId}`).off("hover:enter").remove();
+        $(`.menu [id="${buttonId}"]`).off("hover:enter").remove();
     }
 }
 

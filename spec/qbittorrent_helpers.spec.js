@@ -2,6 +2,7 @@ import { expect, suite, test } from 'vitest'
 
 import {
     escapeHtml,
+    isTorrentDownloading,
     isTorrentStopped,
     magnetExactTopic,
     normalizeTorrentMetadata,
@@ -86,6 +87,12 @@ suite('qBittorrent helpers', () => {
         expect(isTorrentStopped('stoppedDL')).toBe(true)
         expect(isTorrentStopped('stoppedUP')).toBe(true)
         expect(isTorrentStopped('downloading')).toBe(false)
+    })
+
+    test('shows download activity for normal and forced downloads', () => {
+        expect(isTorrentDownloading('downloading')).toBe(true)
+        expect(isTorrentDownloading('forcedDL')).toBe(true)
+        expect(isTorrentDownloading('stalledDL')).toBe(false)
     })
 
     test('safely extracts magnet topics and ignores regular torrent URLs', () => {

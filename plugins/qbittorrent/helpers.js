@@ -36,6 +36,10 @@ function isTorrentStopped(state) {
     return ['pausedDL', 'pausedUP', 'stoppedDL', 'stoppedUP'].includes(state);
 }
 
+function isTorrentDownloading(state) {
+    return state === 'downloading' || state === 'forcedDL';
+}
+
 function normalizeTorrentMetadata(metadata) {
     const normalized = {...(metadata || {})};
     normalized.title = normalized.title || normalized.name || '';
@@ -187,6 +191,7 @@ export {
     escapeHtml,
     torrentHash,
     isTorrentStopped,
+    isTorrentDownloading,
     normalizeTorrentMetadata,
 }
 

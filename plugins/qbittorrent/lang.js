@@ -125,11 +125,11 @@ function InstallLanguagePack() {
             en: 'Stalled (UP)'
         },
         qbtStoppedUP: {
-            ru: 'Остановлен (загр.)',
+            ru: 'Остановлен (разд.)',
             en: 'Stopped (UP)'
         },
         qbtStoppedDL: {
-            ru: 'Остановлен (разд.)',
+            ru: 'Остановлен (загр.)',
             en: 'Stopped (DL)'
         },
         qbtUnknown: {
