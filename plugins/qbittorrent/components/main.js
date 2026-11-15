@@ -147,28 +147,32 @@ class MainComponent {
         let client = await QBittorrentPlugin.client();
         this.autoUpdateInterval = setInterval(async () => {
             let maindata = await client.syncMainData()
-            for (let hash in this.torrentsComponentMap) {
-                if (!maindata.torrents[hash]) {
-                    this.removeTorrent(hash)
-                }
-            }
-
-            for (let hash in maindata.torrents) {
-                let torrent = maindata.torrents[hash];
-                let component = this.torrentsComponentMap[hash];
-                if (!component) {
-                    await this.addNewTorrent(torrent)
-
-                    // to fix focus
-                    Lampa.Controller.toggle('content');
-                    Lampa.Controller.toggle('content');
-                } else {
-                    component.update(torrent, component.metadata)
-                }
-            }
-
-            this.sortTorrentComponents();
+            await this.updateTorrents(maindata);
         }, 3000)
+    }
+
+    async updateTorrents(maindata) {
+        for (let hash in this.torrentsComponentMap) {
+            if (!maindata.torrents[hash]) {
+                this.removeTorrent(hash)
+            }
+        }
+
+        for (let hash in maindata.torrents) {
+            let torrent = maindata.torrents[hash];
+            let component = this.torrentsComponentMap[hash];
+            if (!component) {
+                await this.addNewTorrent(torrent)
+
+                // to fix focus
+                Lampa.Controller.toggle('content');
+                Lampa.Controller.toggle('content');
+            } else {
+                component.update(torrent, component.metadata)
+            }
+        }
+
+        this.sortTorrentComponents();
     }
 
     /**
@@ -216,22 +220,35 @@ class MainComponent {
         });
 
         // Add click handler for the update button
-        $item.find('[data-qbt-refresh]').on('hover:enter', () => {
-            Lampa.Activity.replace({
-                url: '',
-                title: 'qBittorrent',
-                component: 'qbittorrentPanel',
-                page: 1
-            });
-            Lampa.Noty.show(qbtTranslate('Reloaded'));
+        $item.find('[data-qbt-refresh]').on('hover:enter', async () => {
+            Lampa.Loading.start(() => {}, qbtTranslate('LoadingPleaseWait'));
+            try {
+                const data = await this.qbittorrent.syncMainData();
+                await this.updateTorrents(data);
+                this.head.find('[data-qbt-free-space]').html(
+                    Lampa.Utils.bytesToSize(data.server_state.free_space_on_disk)
+                );
+                Lampa.Noty.show(qbtTranslate('Reloaded'));
+            } catch (e) {
+                console.error('[QBT]', 'Refresh', e);
+                Lampa.Noty.show(e);
+            } finally {
+                Lampa.Loading.stop();
+            }
         });
 
         $item.find('[data-qbt-compact]').on('hover:enter', () => {
             this.setCompactMode(!this.html.hasClass(compactModeClass));
         });
 
-        $item.find('[data-qbt-sort]').on('hover:enter', () => {
+        const sortButton = $item.find('[data-qbt-sort]');
+        sortButton.on('hover:enter', () => {
             this.setSortMode(this.sortMode === sortModeTitle ? sortModeDate : sortModeTitle);
+            Navigator.focus(sortButton[0]);
+            this.last = sortButton[0];
+            this.active = 0;
+            this.scroll.immediate(this.head, false);
+            Lampa.Layer.visible(this.scroll.render(true));
         });
 
         this.head.append($item);
@@ -261,7 +278,7 @@ class MainComponent {
             Lampa.Storage.set(sortModeStorageKey, this.sortMode);
         }
 
-        this.sortTorrentComponents();
+        this.sortTorrentComponents(!save);
     }
 
     torrentDisplayTitle(component) {
@@ -283,7 +300,7 @@ class MainComponent {
         return second.torrent.added_on - first.torrent.added_on || titleComparison;
     }
 
-    sortTorrentComponents() {
+    sortTorrentComponents(preserveActive = true) {
         const header = this.items[0];
         const currentItems = this.items.slice(1);
         const sortedItems = currentItems.slice().sort(this.compareTorrentComponents.bind(this));
@@ -293,7 +310,7 @@ class MainComponent {
             return;
         }
 
-        const activeItem = this.items[this.active];
+        const activeItem = preserveActive ? this.items[this.active] : null;
         sortedItems.forEach((item) => this.body.append(item.render()));
         this.items = [header].concat(sortedItems);
 

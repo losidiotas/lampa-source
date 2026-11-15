@@ -11,7 +11,7 @@ function RegisterTemplates() {
             <div data-qbt-sort class="qbittorrent-plugin-head__sort simple-button selector">{sortButtonLabel}</div>
             <div data-qbt-compact class="qbittorrent-plugin-head__compact simple-button selector">{compactButtonLabel}</div>
         </div>
-        <div class="qbittorrent-plugin-head__free_space">{freeSpaceLabel}: {freeSpace}</div>
+        <div class="qbittorrent-plugin-head__free_space">{freeSpaceLabel}: <span data-qbt-free-space>{freeSpace}</span></div>
     `);
 
     Lampa.Template.add('qbtTorrentRow', `
