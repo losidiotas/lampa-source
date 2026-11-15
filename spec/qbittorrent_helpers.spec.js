@@ -3,9 +3,12 @@ import { expect, suite, test } from 'vitest'
 import {
     escapeHtml,
     isTorrentDownloading,
+    isTorrentMetadataTag,
     isTorrentStopped,
     magnetExactTopic,
     normalizeTorrentMetadata,
+    parseTorrentTags,
+    replaceTorrentMetadataTag,
     torrentHash,
 } from '../plugins/qbittorrent/helpers'
 import { TorrentComponent } from '../plugins/qbittorrent/components/torrent'
@@ -119,6 +122,16 @@ suite('qBittorrent helpers', () => {
         ])).toEqual([
             {id: 2, media_type: 'movie'},
             {id: 3, media_type: 'tv'},
+        ])
+    })
+
+    test('replaces only TMDB metadata tags and preserves user tags', () => {
+        const tags = parseTorrentTags('favorite, movie/10, tv/20, 4k')
+        expect(tags.filter(isTorrentMetadataTag)).toEqual(['movie/10', 'tv/20'])
+        expect(replaceTorrentMetadataTag(tags, 'movie/30')).toEqual([
+            'favorite',
+            '4k',
+            'movie/30',
         ])
     })
 })

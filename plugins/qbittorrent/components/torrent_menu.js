@@ -3,8 +3,11 @@ import { qbtTranslate } from "../lang";
 import {
     escapeHtml,
     isTorrentStopped,
+    isTorrentMetadataTag,
     lampaEditor,
     normalizeTorrentMetadata,
+    parseTorrentTags,
+    replaceTorrentMetadataTag,
     torrentHash
 } from "../helpers";
 import { TMDBClient } from "../tmdb";
@@ -390,19 +393,21 @@ class TorrentMenu {
     }
 
     static async saveTorrentTag(torrent, tag) {
-        let tags = torrent.tags.split(',');
-        for (let i in tags) {
-            tags[i] = tags[i].trim()
+        const tags = parseTorrentTags(torrent.tags);
+        const obsoleteTags = tags.filter((existingTag) => {
+            return isTorrentMetadataTag(existingTag) && existingTag !== tag;
+        });
+        const updatedTags = replaceTorrentMetadataTag(tags, tag);
+        let client = await QBittorrentPlugin.client()
+
+        if (!tags.includes(tag)) {
+            await client.addTags(torrent, [tag]);
+        }
+        if (obsoleteTags.length) {
+            await client.removeTags(torrent, obsoleteTags);
         }
 
-        let newTags = tags.filter((tag) => {
-            return !/^(tv|movie)\/\d+$/.test(tag);
-        });
-
-        newTags.push(tag)
-
-        let client = await QBittorrentPlugin.client()
-        return client.addTags(torrent, newTags)
+        torrent.tags = updatedTags.join(',');
     }
 
     static async showFilesPriorityMenu(torrent) {

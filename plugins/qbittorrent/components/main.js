@@ -5,7 +5,7 @@ import { qbtTranslate } from "../lang";
 import { TorrentComponent } from "./torrent";
 import { QBittorrentPlugin as QBittorrent } from "../qbittorrent";
 import { TorrentMenu } from "./torrent_menu";
-import { escapeHtml, normalizeTorrentMetadata, torrentHash } from "../helpers";
+import { escapeHtml, isTorrentMetadataTag, normalizeTorrentMetadata, parseTorrentTags, torrentHash } from "../helpers";
 
 const expandedTorrentClass = 'qbittorrent-plugin__row--expanded';
 const compactModeClass = 'qbittorrent-plugin--compact';
@@ -529,10 +529,7 @@ class MainComponent {
      * @returns {string}
      */
     getTorrentTag(torrent) {
-        let tags = torrent.tags.split(',');
-        return tags.find((tag) => {
-            return /^(tv|movie)\/\d+$/.test(tag);
-        });
+        return parseTorrentTags(torrent.tags).find(isTorrentMetadataTag);
     }
 
     async createTorrentComponent(torrent) {

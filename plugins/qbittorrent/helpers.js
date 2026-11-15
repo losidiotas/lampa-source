@@ -47,6 +47,26 @@ function normalizeTorrentMetadata(metadata) {
     return normalized;
 }
 
+function parseTorrentTags(tags) {
+    return String(tags || '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+}
+
+function isTorrentMetadataTag(tag) {
+    return /^(tv|movie)\/\d+$/.test(tag);
+}
+
+function replaceTorrentMetadataTag(tags, replacement) {
+    const parsedTags = Array.isArray(tags) ? tags : parseTorrentTags(tags);
+    const updatedTags = parsedTags.filter((tag) => !isTorrentMetadataTag(tag));
+    if (replacement && !updatedTags.includes(replacement)) {
+        updatedTags.push(replacement);
+    }
+    return updatedTags;
+}
+
 function lampaEditor(params) {
     return new Promise(function (resolve) {
         Lampa.Input.edit(params, function (value) {
@@ -193,5 +213,8 @@ export {
     isTorrentStopped,
     isTorrentDownloading,
     normalizeTorrentMetadata,
+    parseTorrentTags,
+    isTorrentMetadataTag,
+    replaceTorrentMetadataTag,
 }
 

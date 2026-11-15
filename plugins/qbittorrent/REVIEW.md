@@ -40,7 +40,7 @@
    Файл: `components/torrent_menu.js`.
    Справка: <https://github.com/qbittorrent/qBittorrent/issues/21561>.
 
-8. **При смене TMDB-метаданных старый тег не удаляется.**
+8. **[Исправлено 2026-11-15] При смене TMDB-метаданных старый тег не удаляется.**
    Код формирует новый набор тегов, но отправляет его через `addTags`, который только добавляет теги. В результате остаются старый и новый `movie/id` или `tv/id`, а при следующем открытии может выбираться старый. Для замены нужны `setTags` или `removeTags`.
    Файлы: `components/torrent_menu.js`, `client.js`.
    Справка: <https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-%28qBittorrent-5.0%29>.

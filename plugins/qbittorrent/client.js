@@ -115,6 +115,25 @@ class QBittorrentClient {
     }
 
     /**
+     * @param torrent {TorrentDescription}
+     * @param tags {string[]}
+     * @returns {Promise<any>}
+     */
+    async removeTags(torrent, tags) {
+        let params = {
+            url: `${this.url}/api/v2/torrents/removeTags`,
+            method: 'POST',
+            headers: this.#headers('application/x-www-form-urlencoded'),
+            data: {
+                hashes: torrentHash(torrent),
+                tags: tags.join(',')
+            }
+        }
+
+        return ajax(params);
+    }
+
+    /**
      * @param selectedTorrent {object}
      * @param tags {string[]}
      * @param options {object}
