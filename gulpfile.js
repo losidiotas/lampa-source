@@ -299,7 +299,12 @@ function watch(done){
 function browser_sync(done) {
     browser.init({
         server: {
-            baseDir: bulFolder+'web/'
+            baseDir: bulFolder+'web/',
+            host: '0.0.0.0',
+            middleware: function (req, res, next) {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                next();
+            }
         },
         open: false,
         notify: false,
